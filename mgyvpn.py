@@ -13,6 +13,7 @@ from os import chdir
 
 #Redirection des messages d'erreur
 errorlogfile=open('./mgyvpn.error.log','w')
+#TODO: Try Finally pour ce flux
 sys.stderr=errorlogfile
 
 #lié à Signal
