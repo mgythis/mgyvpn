@@ -11,41 +11,45 @@ import signal
 import subprocess
 
 #Redirection des messages d'erreur
-#errorlogfile=open('./mgyvpn.error.log','w')
-#sys.stderr=(errorlogfile)
+errorlogfile=open('./mgyvpn.error.log','w')
+sys.stderr=errorlogfile
 
 #lié à Signal
 def fermeture(signal, frame):
    """Cette fonction est appelée quand l'excécution du script est interrompue"""
   #TODO Enregistrer un log de fermeture inopinée 
+  print("L'exécution du script a été interrompue !!!")
   sys.exit(0) 
-  
+
+#Assignation d'une fonction au signal SIGINT
+signal.signal(signal.SIGINT,fermeture)
+
+def exec_command(macommande,titre=""):
+  if not titre:
+    #TODO: Gestion des caractères spéciaux
+    titre=macommande
+  print(titre)
+  try:
+    res=subprocess.run(macommande, shell=True,  stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    print("Fin de l'opération !")
+  except CalledProcessError as e:
+    print(e.message()) #TODO Enregistrer l'erreur et quitter le programme
+    raise e
 
 #TODO  
 #Vérifier l'accès à Internet
 
 try:
+
   #Mise à jour du système
-  res=subprocess.run("apt-get install update -y && apt-get upgrade -y", capture_output=True, text=True, check=True)
-  try:
-    res.return_code() #Génère une exception de type CalledProcessError en cas d'absence d'erreur 
-  except CalledProcessError:
-    pass #TODO Enregistrer l'erreur et quitter le programme
+  def exec_command("apt-get -y update && apt-get -y upgrade","Mise à jour du système")
   
   #Installation d'OpenVPN
-  res=subprocess.run("apt-get install openvpn=2.4.4-2ubuntu1.3 -V -y", capture_output=True, text=True, check=True)
-  try:
-    res.return_code() #Génère une exception de type CalledProcessError en cas d'absence d'erreur 
-  except CalledProcessError:
-    pass #TODO Enregistrer l'erreur et quitter le programme
+  def exec_command("apt-get install -y openvpn=2.4.4-2ubuntu1.3 -V","Installation d'OpenVPN")
 
   #Installation de easy-rsa
-  res=subprocess.run("apt-get install easy-rsa=2.2.2-2 -V -y", capture_output=True, text=True, check=True)
-  try:
-    res.return_code() #Génère une exception de type CalledProcessError en cas d'absence d'erreur 
-  except CalledProcessError:
-    pass #TODO Enregistrer l'erreur et quitter le programme
-  apt-get install easy-rsa=2.2.2-2 -V -y
+  def exec_command("apt-get install -y easy-rsa=2.2.2-2 -V","Installation de easy-rsa")
+ 
  
 except: 
   
