@@ -84,6 +84,7 @@ try:
   exec_command("cp {}.crt {}.key ca.crt dh2048.pem ta.key /etc/openvpn/".format(hote_local,hote_local),etape) #TODO: Mettre à jour le nom d'hôte
   
   etape="Créer le certificat pour le client distant"
+  
   chdir("/etc/openvpn/")
   exec_command("./build-key {}".format(hote_distant),etape) #TODO: Mettre à jour le nom d'hôte
   
@@ -93,19 +94,31 @@ try:
   #TODO: Spécifier une adresse réseau pour les interfaces virtuelles à créer avec la directive :
 	#server 194.0.0.0 255.255.255.248
   
-  #TODO: Récupérer modifier le fichier server.conf, notamment les paramètres CA, CRT, DH et KEY
+  #TODO: Récupérer et modifier le fichier server.conf, notamment les paramètres CA, CRT, DH et KEY
   #Indiquer aux clients l'accès au LAN serveur
 
   #TODO: Activer le routage par le VPN vers le LAN distant avec les directives :
-	#client-config-dir ccd
-	#route 10.0.2.0 255.255.255.0
+  #client-config-dir ccd
+  #route 10.0.2.0 255.255.255.0
   
   exec_command("mkdir ./ccd") #TODO: Créer lo dossier si cela n'existe pas
   
   #TODO: Mettre à jour les variables ci-dessous
   exec_command("echo iroute {} {} > ./ccd/{}".format(lan_distant,masque_distant,hote_distant)) 
 
-  #exec_command("")
+  etape="Redémarrage du serveur"
+  exec_command("systemctl restart openvpn@server",etape)
+	
+	####Client
+	
+	#TODO: Récupérer et modifier le fichier client.conf, notamment les paramètres CA, CRT et KEY
+	#TODO: Définissez l'adresse WAN du serveur en modifiant le mot clé Remote
+	
+	#TODO Récupérer sur le serveur les clés du client et au besoin les supprimer (faire de ceci un paramètre du module) sur le serveur
+	
+	etape="Redémarrage du client"
+  exec_command("systemctl restart openvpn@client",etape)
+	
   #exec_command("")
   #exec_command("") 
   #exec_command("")
