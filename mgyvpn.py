@@ -72,16 +72,16 @@ def EditEasyRsaVars(fichier,dict_param):
 		
 
 def EditOpenVpn(fichier, serveur=True):
-	"""Modification du fichier de configuration /etc/openvpn/server.conf ou client.conf"""
-	with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
-		config_entiere = yaml.load_all(f, Loader=yaml.FullLoader)
-    		for config in config_entiere:
-        		for param, v in config.items():
-				if param=="Easy-RSA":
-					print (v)
-					EditEasyRsaVars("./vars",v)
-				else:
-					print (param,'->',v)		
+        """Modification du fichier de configuration /etc/openvpn/server.conf ou client.conf"""
+        with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
+                config_entiere=yaml.load_all(f,Loader=yaml.FullLoader)
+                for conf in config_entiere:
+                        for param,v in conf.items():
+                                if param=="Easy-RSA":
+                                        print(v)
+                                        EditEasyRsaVars("./vars",v)
+                                else:
+                                        print(param,'->',v)
 					
 	
 EditOpenVpn("./mgyvpn.server.yaml")
