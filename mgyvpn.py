@@ -48,16 +48,22 @@ def exec_command(macommande,titre="",log=logfile):
 		print(e.message()) #TODO Enregistrer l'erreur et quitter le programme
 		raise e
 
-varItems=["KEY_COUNTRY","KEY_PROVINCE","KEY_CITY","KEY_ORG","KEY_EMAIL","KEY_CN","KEY_ALTNAMES","KEY_NAME","KEY_OU"]
-
 def EditEasyRsaVars(fichier,dict_param):
-	with open(fichier,r) as f:
-		for ligne in f:
-			p=re.compile(r'^export\s?="?'+r"\s+"?
-			for parametre in varItems:
-			
-			t=re.sub(r
-	
+	with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
+		for ligne in f: #Parcourir les lignes du ficher vars
+			for cle, valeur in dict_param: #Parcourir la liste des paramètres à customiser
+				if re.match(r'^export '+cle+'=',ligne): #Vérifier si la ligne correspond à un paramètre
+					texte+=fr'export {cle}="valeur"\n' #Créer la ligne à remplacer
+					
+					#Supprimer ce paramètre dans la liste des paramètres à vérifier
+					del dict_param[cle]
+					break
+				else :
+					texte+=ligne	#Copier la ligne sans modification
+					
+	#Enregistrer le fichier modifié
+	with open(fichier,'w') as f:
+		f.write(texte)
 	
 #TODO  
 #Vérifier l'accès à Internet
