@@ -57,15 +57,18 @@ def EditEasyRsaVars(fichier,dict_param):
 	texte=''
 	with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
 		for ligne in f: #Parcourir les lignes du ficher vars
+			remplacement=False
 			for cle in dict_param: #Parcourir la liste des paramètres à customiser
-				if re.match(r'^export '+dict_param[cle]+'=',ligne): #Vérifier si la ligne correspond à un paramètre
+				p='^export ('+cle+').='
+				if re.match(p,ligne): #Vérifier si la ligne correspond à un paramètre
 					texte+='export {}="{}"\n'.format(cle,dict_param[cle]) #Créer la ligne à remplacer
-					
 					#Supprimer ce paramètre dans la liste des paramètres à vérifier
 					del dict_param[cle]
+					remplacement=True
 					break
-				else :
-					texte+=ligne	#Copier la ligne sans modification
+			if remplacement:
+				texte+=ligne	#Copier la ligne sans modification
+					
 	#Enregistrer le fichier modifié
 	with open(fichier,'w') as f:
 		f.write(texte)
