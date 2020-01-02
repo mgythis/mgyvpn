@@ -14,83 +14,83 @@ import re
 import yaml
 
 #Redirection des messages d'erreur
-logfile=open('./mgyvpn.log','w') 
-try:	
-	#TODO: Try Finally pour ce flux
-	sys.stderr=logfile
+logfile=open('./mgyvpn.log','w')
+#TODO: Try Finally pour ce flux
+sys.stderr=logfile
 
-	def logmessage(msg,logfile):
-		"""Procédure de gestion des logs, et d'affichage sur la console"""
-		print(msg)
-		logfile.write(msg+'\n')
+def logmessage(msg,logfile):
+	"""Procédure de gestion des logs, et d'affichage sur la console"""
+	print(msg)
+	logfile.write(msg+'\n')
 
-	#lié à Signal
-	def fermeture(signal, frame):
-		"""Cette fonction est appelée quand l'excécution du script est interrompue"""
-		#TODO Enregistrer un log de fermeture inopinée 
-		logmessage("L'exécution du script a été interrompue !!!")
-		sys.exit(0) 
+#lié à Signal
+def fermeture(signal, frame):
+	"""Cette fonction est appelée quand l'excécution du script est interrompue"""
+	#TODO Enregistrer un log de fermeture inopinée 
+	logmessage("L'exécution du script a été interrompue !!!")
+	sys.exit(0) 
 
-	#Assignation d'une fonction au signal SIGINT
-	signal.signal(signal.SIGINT,fermeture)
+#Assignation d'une fonction au signal SIGINT
+signal.signal(signal.SIGINT,fermeture)
 
-	def exec_command(macommande,titre=""):
-		"""Cette fonction exécute une commande système et retourne un résultat
-		Les erreurs sont consignées dans le fichier error.log"""
-		if not titre:
-			#TODO: Gestion des caractères spéciaux
-			titre=macommande
-		else:
-			titre+="\n"+macommande
+def exec_command(macommande,titre=""):
+	"""Cette fonction exécute une commande système et retourne un résultat
+	Les erreurs sont consignées dans le fichier error.log"""
+	if not titre:
+		#TODO: Gestion des caractères spéciaux
+		titre=macommande
+	else:
+		titre+="\n"+macommande
+	
+	#Mise à jour du log
+	logmessage(titre)
+	
+	try:
+		res=subprocess.run(macommande, shell=True,  stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+		#print("Fin de l'opération !")
+	except CalledProcessError as e:
+		logmessage(e) #TODO Enregistrer l'erreur et quitter le programme
+		raise e
 		
-		#Mise à jour du log
-		logmessage(titre)
+def EditEasyRsaVars(fichier,dict_param):
+	"""Modification du fichier de configuration easy-rsa/vars"""
+	
+	with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
+		for ligne in f: #Parcourir les lignes du ficher vars
+			for cle, valeur in dict_param: #Parcourir la liste des paramètres à customiser
+				if re.match(r'^export '+cle+'=',ligne): #Vérifier si la ligne correspond à un paramètre
+					texte+=fr'export {cle}="valeur"\n' #Créer la ligne à remplacer
+					
+					#Supprimer ce paramètre dans la liste des paramètres à vérifier
+					del dict_param[cle]
+					break
+				else :
+					texte+=ligne	#Copier la ligne sans modification
+	#Enregistrer le fichier modifié
+	with open(fichier,'w') as f:
+		f.write(texte)
 		
-		try:
-			res=subprocess.run(macommande, shell=True,  stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
-			#print("Fin de l'opération !")
-		except CalledProcessError as e:
-			logmessage(e) #TODO Enregistrer l'erreur et quitter le programme
-			raise e
-			
-	def EditEasyRsaVars(fichier,dict_param):
-		"""Modification du fichier de configuration easy-rsa/vars"""
-		
-		with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
-			for ligne in f: #Parcourir les lignes du ficher vars
-				for cle, valeur in dict_param: #Parcourir la liste des paramètres à customiser
-					if re.match(r'^export '+cle+'=',ligne): #Vérifier si la ligne correspond à un paramètre
-						texte+=fr'export {cle}="valeur"\n' #Créer la ligne à remplacer
-						
-						#Supprimer ce paramètre dans la liste des paramètres à vérifier
-						del dict_param[cle]
-						break
-					else :
-						texte+=ligne	#Copier la ligne sans modification
-		#Enregistrer le fichier modifié
-		with open(fichier,'w') as f:
-			f.write(texte)
-			
 
-	def EditOpenVpn(fichier, serveur=True):
-			"""Modification du fichier de configuration /etc/openvpn/server.conf ou client.conf"""
-			with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
-					config_entiere=yaml.load_all(f)
-					for conf in config_entiere:
-							for param,v in conf.items():
-									if param=="Easy-RSA":
-											print(v)
-											EditEasyRsaVars("./vars",v)
-									else:
-											print(param,'->',v)
-						
-	logmessage("Vérificatioon de la configuration")	
-	EditOpenVpn("./mgyvpn.server.yaml")
+def EditOpenVpn(fichier, serveur=True):
+        """Modification du fichier de configuration /etc/openvpn/server.conf ou client.conf"""
+        with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
+                config_entiere=yaml.load_all(f)
+                for conf in config_entiere:
+                        for param,v in conf.items():
+                                if param=="Easy-RSA":
+                                        print(v)
+                                        EditEasyRsaVars("./vars",v)
+                                else:
+                                        print(param,'->',v)
+					
+	
+EditOpenVpn("./mgyvpn.server.yaml")
 
-		
-	#TODO  
-	#Vérifier l'accès à Internet
+	
+#TODO  
+#Vérifier l'accès à Internet
 
+try:
 
 	#Mise à jour du système
 	etape="Mise à jour du système"
@@ -171,9 +171,7 @@ try:
 	exec_command("systemctl restart openvpn@client",etape)
 
 except CalledProcessError:
-	logmessage("Le script s'est arrêté à cause d'une erreur fatale de type 'CalledProcessError'")
+	print("Le script s'est arrêté à cause d'une erreur fatale de type 'CalledProcessError'")
 else:
-	logmessage("Le script s'est arrêté à cause d'une erreur indéterminée")
-finally:
-	logfile.close()
+  print("Le script s'est arrêté à cause d'une erreur indéterminée")
   
