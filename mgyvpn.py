@@ -11,23 +11,29 @@ import signal
 import subprocess
 import os
 import re
+import yaml
 
 #Redirection des messages d'erreur
 logfile=open('./mgyvpn.error.log','w')
 #TODO: Try Finally pour ce flux
 sys.stderr=logfile
 
+def logmessage(msg,logfile):
+	"""Procédure de gestion des logs, et d'affichage sur la console"""
+	print(msg)
+	logfile.write(msg+'\n')
+
 #lié à Signal
 def fermeture(signal, frame):
 	"""Cette fonction est appelée quand l'excécution du script est interrompue"""
 	#TODO Enregistrer un log de fermeture inopinée 
-	print("L'exécution du script a été interrompue !!!")
+	logmessage("L'exécution du script a été interrompue !!!")
 	sys.exit(0) 
 
 #Assignation d'une fonction au signal SIGINT
 signal.signal(signal.SIGINT,fermeture)
 
-def exec_command(macommande,titre="",log=logfile):
+def exec_command(macommande,titre=""):
 	"""Cette fonction exécute une commande système et retourne un résultat
 	Les erreurs sont consignées dans le fichier error.log"""
 	if not titre:
@@ -35,20 +41,20 @@ def exec_command(macommande,titre="",log=logfile):
 		titre=macommande
 	else:
 		titre+="\n"+macommande"
-	#Mise à jour du log
-	log.write(titre)	
 	
-	#Affichage du log
-	print(titre)
+	#Mise à jour du log
+	logmessage(titre)
 	
 	try:
 		res=subprocess.run(macommande, shell=True,  stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 		#print("Fin de l'opération !")
 	except CalledProcessError as e:
-		print(e.message()) #TODO Enregistrer l'erreur et quitter le programme
+		logmessage(e) #TODO Enregistrer l'erreur et quitter le programme
 		raise e
-
+		
 def EditEasyRsaVars(fichier,dict_param):
+	"""Modification du fichier de configuration easy-rsa/vars"""
+	
 	with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
 		for ligne in f: #Parcourir les lignes du ficher vars
 			for cle, valeur in dict_param: #Parcourir la liste des paramètres à customiser
@@ -60,10 +66,26 @@ def EditEasyRsaVars(fichier,dict_param):
 					break
 				else :
 					texte+=ligne	#Copier la ligne sans modification
-					
 	#Enregistrer le fichier modifié
 	with open(fichier,'w') as f:
 		f.write(texte)
+		
+
+def EditOpenVpn(fichier, serveur=True):
+	"""Modification du fichier de configuration /etc/openvpn/server.conf ou client.conf"""
+	with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
+		config_entiere = yaml.load_all(f, Loader=yaml.FullLoader)
+    		for config in config_entiere:
+        		for param, v in config.items():
+				if param=="Easy-RSA":
+					print (v)
+					EditEasyRsaVars("./vars",v)
+				else:
+					print (param,'->',v)		
+					
+	
+EditOpenVpn("./mgyvpn.server.yaml")
+
 	
 #TODO  
 #Vérifier l'accès à Internet
@@ -128,7 +150,9 @@ try:
 	#client-config-dir ccd
 	#route 10.0.2.0 255.255.255.0
 
-	exec_command("mkdir ./ccd") #TODO: Créer lo dossier si cela n'existe pas
+	logmessage("Créer le dossier .ccd")
+	if not os.isdir:
+		os.mkdir("./ccd") #TODO: Créer lo dossier si cela n'existe pas
 
 	#TODO: Mettre à jour les variables ci-dessous
 	exec_command("echo iroute {} {} > ./ccd/{}".format(lan_distant,masque_distant,hote_distant)) 
@@ -146,16 +170,8 @@ try:
 	etape="Redémarrage du client"
 	exec_command("systemctl restart openvpn@client",etape)
 
-	#exec_command("")
-	#exec_command("") 
-	#exec_command("")
-	#exec_command("")
-	#exec_command("")
-	#exec_command("")
-
 except CalledProcessError:
-	#Echec chdir
-	print("Le script s'est arrêté à cause d'une erreur fatale")
+	print("Le script s'est arrêté à cause d'une erreur fatale de type 'CalledProcessError'")
 else:
   print("Le script s'est arrêté à cause d'une erreur indéterminée")
   
