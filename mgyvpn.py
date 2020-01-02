@@ -18,10 +18,10 @@ logfile=open('./mgyvpn.log','w')
 #TODO: Try Finally pour ce flux
 sys.stderr=logfile
 
-def logmessage(msg,logfile):
+def logmessage(msg,f=logfile):
 	"""Procédure de gestion des logs, et d'affichage sur la console"""
 	print(msg)
-	logfile.write(msg+'\n')
+	f.write(msg+'\n')
 
 #lié à Signal
 def fermeture(signal, frame):
@@ -54,12 +54,12 @@ def exec_command(macommande,titre=""):
 		
 def EditEasyRsaVars(fichier,dict_param):
 	"""Modification du fichier de configuration easy-rsa/vars"""
-	
+	texte=''
 	with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
 		for ligne in f: #Parcourir les lignes du ficher vars
-			for cle, valeur in dict_param: #Parcourir la liste des paramètres à customiser
-				if re.match(r'^export '+cle+'=',ligne): #Vérifier si la ligne correspond à un paramètre
-					texte+=fr'export {cle}="valeur"\n' #Créer la ligne à remplacer
+			for cle in dict_param: #Parcourir la liste des paramètres à customiser
+				if re.match(r'^export '+dict_param[cle]+'=',ligne): #Vérifier si la ligne correspond à un paramètre
+					texte+='export {}="{}"\n'.format(cle,dict_param[cle]) #Créer la ligne à remplacer
 					
 					#Supprimer ce paramètre dans la liste des paramètres à vérifier
 					del dict_param[cle]
@@ -83,8 +83,9 @@ def EditOpenVpn(fichier, serveur=True):
                                 else:
                                         print(param,'->',v)
 					
-	
+logmessage("Vérification du fichier de configuration")	
 EditOpenVpn("./mgyvpn.server.yaml")
+
 
 	
 #TODO  
