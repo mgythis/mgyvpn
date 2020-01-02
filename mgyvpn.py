@@ -9,7 +9,8 @@
 import sys
 import signal
 import subprocess
-from os import chdir
+import os
+import re
 
 #Redirection des messages d'erreur
 logfile=open('./mgyvpn.error.log','w')
@@ -47,11 +48,15 @@ def exec_command(macommande,titre="",log=logfile):
 		print(e.message()) #TODO Enregistrer l'erreur et quitter le programme
 		raise e
 
-def EditOpenvpnConf(fichier,dict_param):
+varItems=["KEY_COUNTRY","KEY_PROVINCE","KEY_CITY","KEY_ORG","KEY_EMAIL","KEY_CN","KEY_ALTNAMES","KEY_NAME","KEY_OU"]
+
+def EditEasyRsaVars(fichier,dict_param):
 	with open(fichier,r) as f:
-		t=f.read()
-		for param, valeur in dict_param:
-			t
+		for ligne in f:
+			p=re.compile(r'^export\s?="?'+r"\s+"?
+			for parametre in varItems:
+			
+			t=re.sub(r
 	
 	
 #TODO  
@@ -71,8 +76,7 @@ try:
 	etape="Installation de easy-rsa"
 	exec_command("apt-get install -y easy-rsa=2.2.2-2 -V",etape)
 
-	#exec_command("mkdir /etc/openvpn/easy-rsa/")
-	os.path.mkdir("mkdir /etc/openvpn/easy-rsa/")
+	os.mkdir("mkdir /etc/openvpn/easy-rsa/")
 	
 	exec_command("cp -r usr/share/easyrsa/* /etc/openvpn/easy-rsa/")
 	exec_command("ln -s /etc/openvpn/openssl.cnf /etc/openvpn/openssl-1.0.0.cnf")
@@ -80,8 +84,7 @@ try:
 	#TODO: Editer le fichier "/etc/openvpn/easy-rsa/vars"
 
 	#Changer de répertoire de travail
-	#chdir("/etc/openvpn/")
-	os.path.chdir(
+	os.chdir("/etc/openvpn/")
 
 	etape="Générer le Master Authority Certificate (CA)"
 	#exec_command(./source vars",etape) 
@@ -103,7 +106,7 @@ try:
 
 	etape="Créer le certificat pour le client distant"
 
-	chdir("/etc/openvpn/")
+	os.chdir("/etc/openvpn/")
 	exec_command("./build-key {}".format(hote_distant),etape) #TODO: Mettre à jour le nom d'hôte
 
 	#TODO: copier sur VPNDistant les fichiers VPNDistant.crt, VPNDistant.key du dossier /etc/openvpn/easy-rsa/keys 
