@@ -75,7 +75,7 @@ try:
 	def EditOpenVpn(fichier, serveur=True):
 			"""Modification du fichier de configuration /etc/openvpn/server.conf ou client.conf"""
 			with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
-					config_entiere=yaml.load_all(f,Loader=yaml.FullLoader)
+					config_entiere=yaml.load_all(f)
 					for conf in config_entiere:
 							for param,v in conf.items():
 									if param=="Easy-RSA":
@@ -84,7 +84,7 @@ try:
 									else:
 											print(param,'->',v)
 						
-		
+	logmessage("Vérificatioon de la configuration")	
 	EditOpenVpn("./mgyvpn.server.yaml")
 
 		
