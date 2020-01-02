@@ -3,7 +3,7 @@
 #TODO: Gérer une version de fichier
 Version: 1.0
 
-Local Network
+Local Network:
     #WAN IP toward Client devices 
     wanInterface: 192.168.0.1
     
@@ -18,16 +18,16 @@ Local Network
     TunnelNetwork: 10.8.0.0 255.255.255.0  
 
 #TODO: Default Routing
-Routing
+Routing:
     Enabled: True
     DNS: [8.8.8.8]
     Gateway4: 172.16.0.1
   
-Clients
+Clients:
     #Change the hostname remote1 to suit your need
     remote1: 10.0.1.0 255.255.255.0            
             
-Easy-RSA
+Easy-RSA:
     KEY_COUNTRY: CG
     KEY_PROVINCE: PNR
     KEY_CITY: KEY_ORG: OCPROJET6
