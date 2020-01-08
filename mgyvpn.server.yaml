@@ -3,29 +3,30 @@
 #TODO: Gérer une version de fichier
 Version: 1.0
 
-Local Network:
-    #WAN IP toward Client devices 
+ServerName: vpnserver
+
+Network:
+    #WAN IP 
     wanInterface: 192.168.0.1
     
     #VPN listening Port
     ipPort: 1194
     
     #Nested networks behind server
-    lanNetwork:
-        - 10.0.0.0 255.255.255.0
+    lanNetwork: 10.0.0.0 255.255.255.0
     
     #Network segment for VPN TUN nodes
-    TunnelNetwork: 10.8.0.0 255.255.255.0  
+    virtualNetwork: 10.8.0.0 255.255.255.0  
 
-#TODO: Default Routing
-Routing:
-    Enabled: True
-    DNS: [8.8.8.8]
-    Gateway4: 172.16.0.1
   
 Clients:
     #Change the hostname remote1 to suit your need
-    remote1: 10.0.1.0 255.255.255.0            
+    remote1:
+        wanInterface: 192.168.1.1
+        lanNetwork: 10.0.1.0 255.255.255.0        
+    remote2:
+        wanInterface: 192.168.2.1
+        lanNetwork: 10.0.2.0 255.255.255.0        
             
 Easy-RSA:
     KEY_COUNTRY: CG
