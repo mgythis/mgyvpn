@@ -11,7 +11,7 @@
 <li>Les postes clients et serveurs doivent avoir leur nom d'h&ocirc;te configur&eacute; dans les fichiers /etc/hosts &agrave; moins d'&ecirc;tre enregistr&eacute;s sur un DNS. En effet les noms d'h&ocirc;tes serviront pour pour nommer les cl&eacute;s de s&eacute;curit&eacute;. Clients et serveur devront pouvoir &ecirc;tre joints leur nom d'h&ocirc;te sur le WAN.</li>
 </ol>
 <h3><strong>Installation</strong></h3>
-<p>Pour mettre en place une liaison VPN proc&eacute;der comme suit :</p>
+<p>Pour mettre en place une ou plusieurs liaisons VPN impliquant un serveur VPN unique, proc&eacute;der comme suit :</p>
 <h4>Sur le serveur VPN&nbsp;</h4>
 <ol>
 <li>Modifier le fichier <a href="https://github.com/mgythis/mgy-openvpn/mgyopenvpn.server.yaml">mgyvpn.server.yaml</a> pour correspondre &agrave; votre installation</li>
@@ -40,4 +40,4 @@
 <h3>Licence :</h3>
 <p style="padding-left: 30px;"><a href="https://github.com/mgythis/mgy-openvpn/LICENCE.txt.txt">GNU GPL 3.0</a></p>
 <hr />
-<p><span style="color: #333333;"><em>mgyvpn.py Copyright 2020 Berthis Mongouya</em></span></p>
+<p><span style="color: #333333;"><em>mgyvpn Copyright 2020 Berthis Mongouya</em></span></p>
