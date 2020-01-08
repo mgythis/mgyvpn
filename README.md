@@ -12,10 +12,12 @@
 </ol>
 <h3><strong>Installation</strong></h3>
 <p>Pour mettre en place une liaison VPN proc&eacute;der comme suit :</p>
-<p>Sur le serveur VPN&nbsp;</p>
+<h4>Sur le serveur VPN&nbsp;</h4>
 <ol>
 <li>Modifier le fichier <a href="https://github.com/mgythis/mgy-openvpn/mgyopenvpn.server.yaml">mgyvpn.server.yaml</a> pour correspondre &agrave; votre installation</li>
-<li>Ex&eacute;cuter la commande ci-dessous en tant que super utilisateur :<br />#mgyvpn.py create server</li>
+<li>Ex&eacute;cuter la commande ci-dessous en tant que super utilisateur :
+<blockquote>#mgyvpn.py create server</blockquote>
+</li>
 <li>Copier depuis /etc/openvpn du serveur OpenVPN vers un dossier de votre choix sur le client VPN les fichiers ci-dessous:
 <ul style="list-style-type: square;">
 <li>ta.key -ca.crt</li>
@@ -26,7 +28,7 @@
 </ul>
 </li>
 </ol>
-<p>Sur chaque client VPN</p>
+<h4>Sur chaque client VPN</h4>
 <p style="padding-left: 30px;">Ex&eacute;cuter la commande :</p>
 <blockquote>
 <p style="padding-left: 30px;">#mgypvp.py add client <em>NomDelaMachineCliente</em> -d <em>DossierDesClesDeSecurite&nbsp;</em></p>
