@@ -260,12 +260,12 @@ Ces commandes doivent être exécutées en mode administrateur
                 if arg[3]:
                     if arg[4]=='-d' and arg[5]:
                         try:
-                            fichiers=['ca.crt',"ta.key","dh2048.pem","{}.crt".format(arg[3]),'{}.key'.format(arg[3]),"mgyvpn.server.yaml"]
+                            fichiers=['ca.crt',"ta.key","dh2048.pem","{}.crt".format(arg[3]),'{}.key'.format(arg[3]),"mgyvpn.client.yaml"]
                             i=0
                             for f in fichiers:
                                 fic="{}/{}".format(arg[5],f)
                                 if not os.path.isfile(fic):
-                                    logmessage("La clé '{}' est manquante".format(f))
+                                    logmessage("Le fichier '{}' est manquant".format(f))
                                 else:
                                     i+=1
                                     fichiersACopier.append(fic)
