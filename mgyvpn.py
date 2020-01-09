@@ -14,6 +14,7 @@ import os
 import re
 import yaml
 from socket import inet_aton
+from copy import deepcopy
 
 #Redirection des messages d'erreur
 logfile=open('./mgyvpn.log','w')
@@ -44,11 +45,12 @@ try:
         """Cette fonction renvoie True quand l'adresse IP fournie est valide
         Elle crée une exception dans le cas d'une adresse invalide"""
         try:
-            #socket.inet_aton(str(ip_addr))
+            #From socket module
+            inet_aton(str(ip_addr))
             return True
         except:
-            logmessage("l'adresse IP '{}' n'est pas valide".format(ip_addr))
-            raise Exception("IP '{}' non valide".format(ip_addr))  
+            logmessage("l'adresse IP '{}' n'est pas valide".format(str(p_addr)))
+            raise Exception("IP '{}' non valide".format(str(ip_addr)))  
 
 
     def exec_command(macommande,titre=""):
@@ -84,9 +86,9 @@ try:
                         break
                 if not remplacement:
                     texte+=ligne	#Copier la ligne sans modification
-#        print(texte)	
+        print(texte)	
 	#Enregistrer le fichier modifié
-        with open("./vars",'w') as f:
+        with open(fichier,'w') as f:
             f.write(texte)
     
 
@@ -107,7 +109,7 @@ verb 3
 status openvpn-status.log
 explicit-exit-notify 1
 """
-
+        rsaDict={}
         with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
             config_entiere=yaml.load_all(f)
             listeClients=[]
@@ -116,8 +118,7 @@ explicit-exit-notify 1
             for conf in config_entiere:
                 for param,v in conf.items():
                     if param=="Easy-RSA":
-                        EditEasyRsaVars("./vars",v)
-                        listeFichiersConfig.append("{}/var2".format(os.getcwd()))
+                        rsaDict=deepcopy(v)
                     elif param=="Version":
                         if v !=1.0:
                             logmessage("Version du fichier de configuration non pris en charge")
@@ -133,11 +134,8 @@ explicit-exit-notify 1
                         texte+='push "route  '+ v["lanNetwork"]+'"\n'
                     elif param=="Clients":
                         if not os.path.isdir("./ccd"):
-#                        if not os.path.isdir("/etc/openvpn/ccd"):
-                            print('here')
-                            logmessage("Création du répertoire CCD")
+                            logmessage("Préparation du répertoire CCD")
                             os.mkdir("./ccd")
-#TODO:                            os.mkdir("/etc/openvpn/ccd")
                         texte+="client-config-dir ccd\n"
                         
                         chemin=os.getcwd()
@@ -148,36 +146,29 @@ explicit-exit-notify 1
                             
                             exec_command('echo "iroute {}" > ./ccd/{}'.format(t["lanNetwork"],param2))
                             
-                            listeCcdFiles.append("{}{}".format(chemin,param2))
+                            listeCcdFiles.append("{}/ccd/{}".format(chemin,param2))
 
                             texte+="route " + t["lanNetwork"]+'\n'
                     else:
                         print("Le paramètre '{}' n'est pas reconnu !!!".format(param))
         
         texte+="cert {}.crt\nkey {}.key\n".format(serverName,serverName)
-        
-        print(texte)
-        print(listeClients)
-        print(listeCcdFiles)
-        
+
         fic='{}/server.conf'.format(os.getcwd())
         with open(fic,'w') as f:
             f.write(texte)
         listeFichiersConfig.append(fic)
         
-        
         texte="""Version: 1.0
 ServerName: {}
-Port: {}
-ClientName: {}""".format(serverName,port)
-        print(texte)
+Port: {}""".format(serverName,port)
         
-        fic='{}/mgyvpnserver.cnf.yaml'.format(os.getcwd())
+        fic='{}/mgyvpn.client.yaml'.format(os.getcwd())
         with open(fic,'w') as f:
             f.write(texte)
         listeFichiersConfig.append(fic)
         
-        return serverName, listeClients, listeCcdFiles, listeFichiersConfig
+        return serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict
     
     
     def EditConfVpnClient(fichier):
@@ -241,14 +232,6 @@ Ces commandes doivent être exécutées en mode administrateur
 
         """)
 
-
-    #TODO  
-    #Vérifier l'accès à Internet
-
-    
-    print(sys.argv)
-    
-#    mode_status=('m_none','m_create_server','m_create_client','m_add_client')
     
     def parse_arguments(arg):
         """Cette fonction détermine s'il est question de :
@@ -258,16 +241,26 @@ Ces commandes doivent être exécutées en mode administrateur
 
         fichiersACopier=[]
         mode_='m_none'
-        if sys.argv[1]=='create':
+    
+        if len(arg)<3:
+            logmessage(print_help())
+            return mode_, fichiersACopier
+        
+        #Dans le cas de l'exécution sur un client sans spécifier le dossier de récupération du fichier de configuration après l'option -d, indiquer un dossier par défaut
+        if len(arg)==4:
+            arg.append("-d")
+            arg.append("/root/mgyvpn")
+            
+
+        if arg[1]=='create':
             if arg[2]=='server':
                 mode_='m_create_server'
                 logmessage("Création d'un serveur OpenVpn")
             elif arg[2]=='client':
                 if arg[3]:
                     if arg[4]=='-d' and arg[5]:
-                        #TODO: check either sys.argv[5] is a directory 
                         try:
-                            fichiers=['ca.crt',"ta.key","dh2048.pem","{}.crt".format(arg[3]),'{}.key'.format(arg[3]),"mgyvpnserver.cnf.yaml"]
+                            fichiers=['ca.crt',"ta.key","dh2048.pem","{}.crt".format(arg[3]),'{}.key'.format(arg[3]),"mgyvpn.server.yaml"]
                             i=0
                             for f in fichiers:
                                 fic="{}/{}".format(arg[5],f)
@@ -295,10 +288,11 @@ Ces commandes doivent être exécutées en mode administrateur
         return mode_, fichiersACopier
 
     
-    
     mode_='m_none'
     
     try:
+        
+        #Analyse des paramètres
         mode_, fichiersACopierSurLeClient = parse_arguments(sys.argv)
         if mode_=='m_none':
             raise Exception()
@@ -310,77 +304,84 @@ Ces commandes doivent être exécutées en mode administrateur
     logmessage("Configuration d'OpenVPN")	
     
     if mode_=='m_create_server':
-        serverName, listeClients, listeCcdFiles, listeFichiersConfig = EditConfVpnServer("./mgyvpn.server.yaml")
+        serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict = EditConfVpnServer("./mgyvpn.server.yaml")
     elif mode_=='m_create_client':
-        clientName, clientConfFile=EditConfVpnClient("{}/mgyvpnserver.cnf.yaml".format(sys.argv[5]))
+        clientName, clientConfFile=EditConfVpnClient("{}/mgyvpn.client.yaml".format(sys.argv[5]))
     
 
     #Mise à jour du système
     etape="Mise à jour du système"
 #    exec_command("apt-get install -y squid",etape)
-    exec_command("apt-get -y update && apt-get -y upgrade",etape)
+#    exec_command("apt-get -y update && apt-get -y upgrade",etape)
     
-    exit()
-
     #Installation d'OpenVPN
     etape="Installation d'OpenVPN"
-    exec_command("apt-get install -y openvpn=2.4.4-2ubuntu1.3 -V",etape)
+    exec_command("apt-get install -y openvpn",etape)
+    #exec_command("apt-get install -y openvpn=2.4.4-2ubuntu1.3 -V",etape)
 
     #Installation de easy-rsa
     if mode_=='m_create_server':
         etape="Installation de easy-rsa"
-        exec_command("apt-get install -y easy-rsa=2.2.2-2 -V",etape)
-
-        os.mkdir("mkdir /etc/openvpn/easy-rsa/")
-
-        exec_command("cp -r usr/share/easyrsa/* /etc/openvpn/easy-rsa/")
-        exec_command("ln -s /etc/openvpn/openssl.cnf /etc/openvpn/openssl-1.0.0.cnf")
-
-        #TODO: Editer le fichier "/etc/openvpn/easy-rsa/vars"
+        exec_command("apt-get install -y easy-rsa",etape)
+        
+        #exec_command("apt-get install -y easy-rsa=2.2.2-2 -V",etape)
+        
+        logmessage("Création du dossier easy-rsa")
+        try:
+            os.mkdir("/etc/openvpn/easy-rsa/")
+        except:
+            pass
+        try:
+            exec_command("cp -r /usr/share/easy-rsa/* /etc/openvpn/easy-rsa/")
+        except:
+            pass
+        try:
+            exec_command("ln -s /etc/openvpn/easy-rsa/openssl-1.0.0.cnf /etc/openvpn/easy-rsa/openssl.cnf")
+        except:
+            pass
 
         #Changer de répertoire de travail
-        os.chdir("/etc/openvpn/")
+        os.chdir("/etc/openvpn/easy-rsa/")
+
+        #Editer le fichier "/etc/openvpn/easy-rsa/vars"
+        EditEasyRsaVars("./vars",rsaDict)
 
         etape="Générer le Master Authority Certificate (CA)"
-        exec_command("./source vars",etape) 
-        exec_command("./clean-all")
-        exec_command("./build-ca")
-
+        exec_command(". ./vars && ./clean-all && ./build-ca --batch",etape)
+        
         etape="Générer la clé d'authentification TLS (TA)"
-        exec_command("./openvpn --genkey --secret ./easy-rsa/keys/ta.key",etape)
+        exec_command("openvpn --genkey --secret ./keys/ta.key",etape)
 
         etape="Création d'un certificat et d'une clé privée pour le serveur"
-        exec_command("/etc/openvpn/build-key-server {}".format(serverName),etape)
+        exec_command(". ./vars && ./build-key-server --batch {}".format(serverName),etape)
 
         etape="Générer les paramètres DH"
-        exec_command("./build-dh", etape) 
+        exec_command(". ./vars &&  ./build-dh", etape) 
 
+        os.chdir("/etc/openvpn/easy-rsa/keys")
         etape="Copie des certificats dans le répertoire de travail"
-        os.chdir("./easy-rsa/keys")
         exec_command("cp {}.crt {}.key ca.crt dh2048.pem ta.key /etc/openvpn/".format(serverName,serverName),etape)
 
-        etape="Créer les certificats pour les client distant"
-
-        os.chdir("/etc/openvpn/")
-        exec_command("./build-key {}".format(clientName),etape) #TODO: Mettre à jour les noms d'hôte dans une boucle
+        os.chdir("/etc/openvpn/easy-rsa/")
+        etape="Créer les certificats de sécurité pour les clients"
+        for clientName in listeClients:
+            exec_command(". ./vars && ./build-key --batch {}".format(clientName),etape) 
 
     #TODO: copier sur VPNDistant les fichiers VPNDistant.crt, VPNDistant.key du dossier /etc/openvpn/easy-rsa/keys 
     #et aussi ta.key et ca.crt
 
+        os.chdir("/etc/openvpn/")
         logmessage("Créer le dossier ./ccd")
-        if not os.isdir:
+        if not os.path.isdir("./ccd"):
             os.mkdir("./ccd") #Créer lo dossier si cela n'existe pas
         
         for fic in listeCcdFiles:
-            exec_command("cp {} ./ccd".format(fic))
+            exec_command("cp {} ./ccd/".format(fic))
 
-        #Mise à jour des fichiers de configuration vars server et mgyyvpnserver.cnf
+        #Mise à jour des fichiers de configuration server.conf et mgyyvpn.server.yaml
         for fic in listeFichiersConfig:
             exec_command("cp {} ./".format(fic))
 
-        for fic in listeClients:
-            etape="Génération de la clé de sécurité pour le client {}".format(fic)
-            exec_command("./easy-rsa/build-key {}".format(fic),etape) #Mettre à jour les noms d'hôte dans une boucle
         
         etape="Redémarrage du serveur"
 #        exec_command("systemctl restart openvpn@server",etape)
@@ -397,8 +398,8 @@ Ces commandes doivent être exécutées en mode administrateur
 
     #TODO Récupérer sur le serveur les clés du client et au besoin les supprimer (faire de ceci un paramètre du module) sur le serveur
 
-    etape="Redémarrage du client"
-    #exec_command("systemctl restart openvpn@client",etape)
+        etape="Redémarrage du client"
+        #exec_command("systemctl restart openvpn@client",etape)
     
     logmessage("Vous avez réussi, votre VPN est installé !!!")
 
