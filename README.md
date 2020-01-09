@@ -9,6 +9,7 @@
 <li>Pour une ex&eacute;cution du script &agrave; distance via SSH, il est important de configurer le compte de l'utilisateur SSH pour ex&eacute;cuter les commandes en mode SUDO sans confirmation de mot de passe</li>
 <li>Avant l'ex&eacute;cution du script sur un &eacute;ventuel client OpenVPN il convient de copier les cl&eacute;s de s&eacute;curit&eacute; g&eacute;n&eacute;r&eacute;es sur le serveur dans un dossier de la machine du client. Par d&eacute;faut le script cherchera les cl&eacute;s de s&eacute;curit&eacute;s dans /root/mgyvpn/</li>
 <li>Les postes clients et serveurs doivent avoir leur nom d'h&ocirc;te configur&eacute; dans les fichiers /etc/hosts &agrave; moins d'&ecirc;tre enregistr&eacute;s sur un DNS. En effet les noms d'h&ocirc;tes serviront pour pour nommer les cl&eacute;s de s&eacute;curit&eacute;. Clients et serveur devront pouvoir &ecirc;tre joints leur nom d'h&ocirc;te sur le WAN.</li>
+<li>Le routage IPv4 doit être activ&eacute; sur toutes les machines, clients et serveur</li>
 </ol>
 <h3><strong>Installation</strong></h3>
 <p>Pour mettre en place une ou plusieurs liaisons VPN impliquant un serveur VPN unique, proc&eacute;der comme suit :</p>
