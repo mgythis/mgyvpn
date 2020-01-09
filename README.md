@@ -14,7 +14,7 @@
 <p>Pour mettre en place une ou plusieurs liaisons VPN impliquant un serveur VPN unique, proc&eacute;der comme suit :</p>
 <h4>Sur le serveur VPN&nbsp;</h4>
 <ol>
-<li>Modifier le fichier <a href="https://github.com/mgythis/mgy-openvpn/mgyopenvpn.server.yaml">mgyvpn.server.yaml</a> pour correspondre &agrave; votre installation</li>
+<li>Modifier le fichier <a href="https://github.com/mgythis/mgyvpn/mgyvpn.server.yaml">mgyvpn.server.yaml</a> pour correspondre &agrave; votre installation</li>
 <li>Ex&eacute;cuter la commande ci-dessous en tant que super utilisateur :
 <blockquote>#mgyvpn.py create server</blockquote>
 </li>
@@ -38,6 +38,6 @@
 <h3>Auteur</h3>
 <p style="padding-left: 30px;">Berthis Mongouya : <a href="mailto:erthis@gmail">erthis@gmail.com</a></p>
 <h3>Licence :</h3>
-<p style="padding-left: 30px;"><a href="https://github.com/mgythis/mgy-openvpn/LICENCE.txt.txt">GNU GPL 3.0</a></p>
+<p style="padding-left: 30px;"><a href="https://github.com/mgythis/mgyvpn/LICENCE.txt">GNU GPL 3.0</a></p>
 <hr />
 <p><span style="color: #333333;"><em>mgyvpn Copyright 2020 Berthis Mongouya</em></span></p>
