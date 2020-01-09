@@ -1,8 +1,3 @@
-#Fichier yaml de configuration pour le noeud client OpenVPN avec le module mgyvpn
-
-#TODO: Gérer une version de fichier
 Version: 1.0
-
-#VPN Server Port
-    IP: 192.168.0.1
-    Port: 1194
+ServerName: vpnserver
+Port: 1194
