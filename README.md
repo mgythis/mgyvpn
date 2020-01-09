@@ -1,6 +1,6 @@
 <h1>Script Python pour le d&eacute;ploiement de OpenVPN sur des machines sous Ubuntu</h1>
-<p>Ce script permet une installation automatique de Openvpn sous linux. Il a &eacute;t&eacute; test&eacute; sur Ubuntu 18.04 LTS avec la version 3 de Python.</p>
-<h3><strong>Description de la configuration </strong></h3>
+<p>Ce script r&eacute;alise une installation automatique de Openvpn sous linux. Il a &eacute;t&eacute; test&eacute; sur Ubuntu 18.04 LTS avec la version 3 de Python.</p>
+<h3><strong>Description</strong></h3>
 <p><em>mgyvpn</em> permet au LAN derri&egrave;re le client VPN d'acc&eacute;der au LAN derri&egrave;re le serveur et vice-versa. Pour ce faire, avant l'ex&eacute;cution du script, il est n&eacute;cessaire que les postes clients et le poste serveurs soient joignables l'un l'autre au travers de leurs interfaces WAN.</p>
 <h3><strong>Conditions particuli&egrave;res : </strong></h3>
 <ol>
