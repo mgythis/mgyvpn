@@ -18,7 +18,7 @@
 <li>Ex&eacute;cuter la commande ci-dessous en tant que super utilisateur :
 <blockquote>#mgyvpn.py create server</blockquote>
 </li>
-<li>Copier depuis /etc/openvpn du serveur OpenVPN vers un dossier de votre choix sur les clients VPN les fichiers ci-dessous:
+<li>Se rendre dans le dossier /etc/openvpn et copier les fichiers ci-dessous de façon s&eacute;curis&eacute;e vers un dossier de votre choix sur chacun des clients :
 <ul style="list-style-type: square;">
 <li>ta.key</li>
 <li>ca.crt</li>
