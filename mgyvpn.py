@@ -287,17 +287,21 @@ Ces commandes doivent être exécutées en mode administrateur
         
         return mode_, fichiersACopier
 
+    #Sauvegarder le chemin d'exécution du module afin de pouvoir récupérer les fichiers et dossiers qui y seront générés
+
+    exec_path=os.getcwd()
     
+    #Cette variable indique le contexte : création d'un serveur ou création d'un client 
     mode_='m_none'
     
     try:
         
-        #Analyse des paramètres
+        #Analyse des argurments du module
         mode_, fichiersACopierSurLeClient = parse_arguments(sys.argv)
         if mode_=='m_none':
             raise Exception()
     except:
-        logmessage("L'installation est interrompue à la suite d'erreurs")
+        logmessage("L'installation est interrompue lors de l'analyse des arguments")
         exit()
 
     
@@ -311,7 +315,6 @@ Ces commandes doivent être exécutées en mode administrateur
 
     #Mise à jour du système
     etape="Mise à jour du système"
-#    exec_command("apt-get install -y squid",etape)
 #    exec_command("apt-get -y update && apt-get -y upgrade",etape)
     
     #Installation d'OpenVPN
@@ -367,9 +370,6 @@ Ces commandes doivent être exécutées en mode administrateur
         for clientName in listeClients:
             exec_command(". ./vars && ./build-key --batch {}".format(clientName),etape) 
 
-    #TODO: copier sur VPNDistant les fichiers VPNDistant.crt, VPNDistant.key du dossier /etc/openvpn/easy-rsa/keys 
-    #et aussi ta.key et ca.crt
-
         os.chdir("/etc/openvpn/")
         logmessage("Créer le dossier ./ccd")
         if not os.path.isdir("./ccd"):
@@ -378,13 +378,35 @@ Ces commandes doivent être exécutées en mode administrateur
         for fic in listeCcdFiles:
             exec_command("cp {} ./ccd/".format(fic))
 
-        #Mise à jour des fichiers de configuration server.conf et mgyyvpn.server.yaml
+        #Copie des fichiers de configuration server.conf et mgyyvpn.server.yaml dans /etc/openvpn
         for fic in listeFichiersConfig:
             exec_command("cp {} ./".format(fic))
 
         
-        etape="Redémarrage du serveur"
-#        exec_command("systemctl restart openvpn@server",etape)
+        #Création du dossier ./export dans le répertoire d'exécution du module mgyvpn
+        #Ce répertoire contiendra des dossiers portant le nom de chaque client VPN
+        #Dans chacun des dossiers on trouvera toutes les clés de sécurité nécessaires et un fichier de conviguration yaml
+        if not os.path.isdir("{}/mgyvpn".format(exec_path)):
+            os.mkdir("{}/mgyvpn".format(exec_path)) #Créer lo dossier si cela n'existe pas
+        chemin="{}/mgyvpn".format(exec_path)
+        for fic in listeClients: #Parcourir la liste des clients VPN
+            if not os.path.isdir("{}/{}".format(chemin,fic)):
+                os.mkdir("{}/{}".format(chemin,fic)) #Créer un dossier pour chaque client
+                try:
+                    os.chdir("etc/openvpn")
+                    exec_command("cp ca.crt dh2048.pem ta.key mgyvpn.client.yaml {}/{}/".format(chemin,fic))
+                    os.chdir("etc/openvpn/easy-rsa/keys")
+                    exec_command("./{}.crt ./{}.key {}/".format(fic,fic,fic))
+                    
+                except:
+                    pass
+
+        #TODO: copier les fichiers par SSH sur les clients
+        for fic in listeClient:
+            try:
+                exec_command("scp -r {}/{} root@{}:/root".format(chemin,fic,fic))
+            except:
+                logmessag("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
     
     
     else: #Cas d'une machine cliente
