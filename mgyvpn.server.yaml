@@ -20,13 +20,15 @@ Network:
 
   
 Clients:
-    #Change the hostname remote1 to suit your need
+    #Change the hostname remote1 and remote 2 to suit your clients host names
     remote1:
         wanInterface: 192.168.1.1
-        lanNetwork: 10.0.1.0 255.255.255.0        
+        lanNetwork: 10.0.1.0 255.255.255.0
+        ssh-user: maint        
     remote2:
         wanInterface: 192.168.2.1
-        lanNetwork: 10.0.2.0 255.255.255.0        
+        lanNetwork: 10.0.2.0 255.255.255.0 
+        ssh-user: maint       
             
 Easy-RSA:
     KEY_COUNTRY: CG

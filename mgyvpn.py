@@ -13,6 +13,7 @@ import subprocess
 import os
 import re
 import yaml
+import traceback
 from socket import inet_aton
 from copy import deepcopy
 
@@ -115,6 +116,7 @@ explicit-exit-notify 1
             listeClients=[]
             listeCcdFiles=[]
             listeFichiersConfig=[]
+            listeSshUsers={}
             for conf in config_entiere:
                 for param,v in conf.items():
                     if param=="Easy-RSA":
@@ -144,6 +146,8 @@ explicit-exit-notify 1
                             logmessage("Création d'une route vers le LAN derrière le client '{}'".format(param2))
                             listeClients.append(param2)
                             
+                            listeSshUsers[param2]=t["ssh-user"]
+                            
                             exec_command('echo "iroute {}" > ./ccd/{}'.format(t["lanNetwork"],param2))
                             
                             listeCcdFiles.append("{}/ccd/{}".format(chemin,param2))
@@ -168,7 +172,7 @@ Port: {}""".format(serverName,port)
             f.write(texte)
         listeFichiersConfig.append(fic)
         
-        return serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict
+        return serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict, listeSshUsers
     
     
     def EditConfVpnClient(fichier):
@@ -177,7 +181,7 @@ Port: {}""".format(serverName,port)
         texte="""
 client
 dev tun
-proto utp
+proto udp
 resolv-retry infinite
 nobind
 persist-key
@@ -249,7 +253,7 @@ Ces commandes doivent être exécutées en mode administrateur
         #Dans le cas de l'exécution sur un client sans spécifier le dossier de récupération du fichier de configuration après l'option -d, indiquer un dossier par défaut
         if len(arg)==4:
             arg.append("-d")
-            arg.append("/root/mgyvpn")
+            arg.append("~/mgyvpn/export")
             
 
         if arg[1]=='create':
@@ -308,7 +312,7 @@ Ces commandes doivent être exécutées en mode administrateur
     logmessage("Configuration d'OpenVPN")	
     
     if mode_=='m_create_server':
-        serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict = EditConfVpnServer("./mgyvpn.server.yaml")
+        serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict, listeSshusers = EditConfVpnServer("./mgyvpn.server.yaml")
     elif mode_=='m_create_client':
         clientName, clientConfFile=EditConfVpnClient("{}/mgyvpn.client.yaml".format(sys.argv[5]))
     
@@ -386,39 +390,42 @@ Ces commandes doivent être exécutées en mode administrateur
         #Création du dossier ./export dans le répertoire d'exécution du module mgyvpn
         #Ce répertoire contiendra des dossiers portant le nom de chaque client VPN
         #Dans chacun des dossiers on trouvera toutes les clés de sécurité nécessaires et un fichier de conviguration yaml
-        if not os.path.isdir("{}/mgyvpn".format(exec_path)):
-            os.mkdir("{}/mgyvpn".format(exec_path)) #Créer lo dossier si cela n'existe pas
-        chemin="{}/mgyvpn".format(exec_path)
+        if not os.path.isdir("{}/export".format(exec_path)):
+            os.mkdir("{}/export".format(exec_path)) #Créer lo dossier si cela n'existe pas
+        chemin="{}/export".format(exec_path)
         for fic in listeClients: #Parcourir la liste des clients VPN
             if not os.path.isdir("{}/{}".format(chemin,fic)):
                 os.mkdir("{}/{}".format(chemin,fic)) #Créer un dossier pour chaque client
                 try:
-                    os.chdir("etc/openvpn")
-                    exec_command("cp ca.crt dh2048.pem ta.key mgyvpn.client.yaml {}/{}/".format(chemin,fic))
-                    os.chdir("etc/openvpn/easy-rsa/keys")
-                    exec_command("./{}.crt ./{}.key {}/".format(fic,fic,fic))
+                    os.chdir("/etc/openvpn")
+                    exec_command("cp -f ca.crt dh2048.pem ta.key mgyvpn.client.yaml {}/{}/".format(chemin,fic))
+                    os.chdir("/etc/openvpn/easy-rsa/keys")
+                    exec_command("cp -f ./{}.crt ./{}.key {}/{}/".format(fic,fic,chemin,fic))
                     
                 except:
                     pass
 
-        #TODO: copier les fichiers par SSH sur les clients
-        for fic in listeClient:
+        #Copier les fichiers par SSH sur les clients 
+        #en utilisant le compte ssh indiqué dans le fichier de configuration
+        for fic in listeClients:
             try:
-                exec_command("scp -r {}/{} root@{}:/root".format(chemin,fic,fic))
+                #exec_command("scp -r {}/{} {}@{}:/root".format(chemin,fic,listeSshusers[fic],fic))
+                logmessage("scp -r {}/{} {}@{}:./mgyvpn".format(chemin,fic,listeSshusers[fic],fic))
             except:
                 logmessag("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
-    
-    
+        
+        etape="Redémarrage du server"
+        #exec_command("systemctl restart openvpn@server",etape)
+     
     else: #Cas d'une machine cliente
         os.chdir("/etc/openvpn/")
         
+        #Récupérer sur le serveur les clés du client et au besoin les supprimer (faire de ceci un paramètre du module) sur le serveur
         for fic in fichiersACopierSurLeClient:
             exec_command("cp {} ./".format(fic))
 
         #Substitution du fichier de configuration
         exec_command("cp {} ./".format(clientConfFile))
-
-    #TODO Récupérer sur le serveur les clés du client et au besoin les supprimer (faire de ceci un paramètre du module) sur le serveur
 
         etape="Redémarrage du client"
         #exec_command("systemctl restart openvpn@client",etape)
@@ -427,10 +434,9 @@ Ces commandes doivent être exécutées en mode administrateur
 
 except subprocess.CalledProcessError:
     logmessage("Le script s'est arrêté à cause d'une exception du type 'CalledProcessError'")
-except ZeroDivisionError:
-    logmessage("Erreur de division par 0")
 else:
     logmessage("Le script s'est arrêté à cause d'une erreur indéterminée")
+    logmessage(traceback.format_exc())
 finally:
     logmessage('Fin du script')
     logfile.close()
