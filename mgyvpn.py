@@ -362,7 +362,7 @@ Ces commandes doivent être exécutées en mode administrateur
         etape="Création d'un certificat et d'une clé privée pour le serveur"
         exec_command(". ./vars && ./build-key-server --batch {}".format(serverName),etape)
 
-        etape="Générer les paramètres DH"
+        etape="Générer les paramètres DH\nAttention, cette étape peut durer plusieurs minutes"
         exec_command(". ./vars &&  ./build-dh", etape) 
 
         os.chdir("/etc/openvpn/easy-rsa/keys")
@@ -408,14 +408,16 @@ Ces commandes doivent être exécutées en mode administrateur
         #Copier les fichiers par SSH sur les clients 
         #en utilisant le compte ssh indiqué dans le fichier de configuration
         for fic in listeClients:
+            logmessage("Si le sripte reste figé à cette étape, il se pourrait que l'accès SSH par clé de sécurité ne fonctionne pas")
             try:
                 #exec_command("scp -r {}/{} {}@{}:/root".format(chemin,fic,listeSshusers[fic],fic))
-                logmessage("scp -r {}/{} {}@{}:./mgyvpn".format(chemin,fic,listeSshusers[fic],fic))
+                logmessage("ssh {}@{} 'mkdir -p ./mgyvpn'".format(listeSshusers[fic],fic))
+                logmessage("scp -rf {}/{} {}@{}:./mgyvpn/".format(chemin,fic,listeSshusers[fic],fic))
             except:
                 logmessag("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
         
         etape="Redémarrage du server"
-        #exec_command("systemctl restart openvpn@server",etape)
+        exec_command("systemctl restart openvpn@server",etape)
      
     else: #Cas d'une machine cliente
         os.chdir("/etc/openvpn/")
