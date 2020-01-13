@@ -101,7 +101,8 @@ try:
 dev tun
 ca ca.crt
 dh dh2048.pem
-ifconfg-pool-persist ipp.txt
+ifconfig-pool-persist /var/log/openvpn/ipp.txt
+status /var/log/openvpn/openvpn-status.log
 keepalive 10 120
 tls-auth ta.key 0
 cipher AES-256-CBC
@@ -179,17 +180,16 @@ Port: {}""".format(serverName,port)
     def EditConfVpnClient(fichier):
         """Création du fichier de configuration ./client.conf
         Ce fichier est destiné à être copié dans /etc/openvpn/"""
-        texte="""
-client
+        texte="""client
 dev tun
 proto udp
 resolv-retry infinite
 nobind
 persist-key
 persist-tun
-remorte-cert-tls server
+remote-cert-tls server
 tls-auth ta.key 1
-#cipher AES-256-CBC
+cipher AES-256-CBC
 verb 3
 """
         with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
@@ -207,7 +207,7 @@ verb 3
                     else:
                         print("Le paramètre '{}' n'est pas reconnu !!!".format(param))
         clientName=sys.argv[3]
-        texte+="remote {} {}\nca ca.crt\n{}.key\n{}.crt\n".format(serverName,port,clientName,clientName)
+        texte+="remote {} {}\nca ca.crt\nkey {}.key\ncert {}.crt\n".format(serverName,port,clientName,clientName)
         fic="{}/client.conf".format(os.getcwd())
         with open(fic,'w') as f:
             f.write(texte)
@@ -254,7 +254,7 @@ Ces commandes doivent être exécutées en mode administrateur
         #Dans le cas de l'exécution sur un client sans spécifier le dossier de récupération du fichier de configuration après l'option -d, indiquer un dossier par défaut
         if len(arg)==4:
             arg.append("-d")
-            arg.append("~/mgyvpn/export")
+            arg.append("~/mgyvpn/serverremotesite")
             
 
         if arg[1]=='create':
@@ -313,7 +313,7 @@ Ces commandes doivent être exécutées en mode administrateur
     logmessage("Configuration d'OpenVPN")	
     
     if mode_=='m_create_server':
-        serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict, listeSshusers = EditConfVpnServer("./mgyvpn.server.yaml")
+        serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict, listeSshUsers = EditConfVpnServer("./mgyvpn.server.yaml")
     elif mode_=='m_create_client':
         clientName, clientConfFile=EditConfVpnClient("{}/mgyvpn.client.yaml".format(sys.argv[5]))
     
@@ -346,7 +346,7 @@ Ces commandes doivent être exécutées en mode administrateur
         try:
             exec_command("ln -s /etc/openvpn/easy-rsa/openssl-1.0.0.cnf /etc/openvpn/easy-rsa/openssl.cnf")
         except:
-            pass
+            logmessage(traceback.format_exc())
 
         #Changer de répertoire de travail
         os.chdir("/etc/openvpn/easy-rsa/")
@@ -411,13 +411,20 @@ Ces commandes doivent être exécutées en mode administrateur
         for fic in listeClients:
             logmessage("Si le sripte reste figé à cette étape, il se pourrait que l'accès SSH par clé de sécurité ne fonctionne pas")
             try:
-                #exec_command("scp -r {}/{} {}@{}:/root".format(chemin,fic,listeSshusers[fic],fic))
-                logmessage("ssh {}@{} 'mkdir -p ./mgyvpn'".format(listeSshusers[fic],fic))
-                logmessage("scp -rf {}/{} {}@{}:./mgyvpn/".format(chemin,fic,listeSshusers[fic],fic))
+                #Création du dossier d'accueil du logiciel sur le client
+                logmessage("Création du dossier d'accueil sur le client '{}'".format(fic))
+                exec_command("ssh {}@{} 'mkdir -p /home/{}/mgyvpn'".format(listeSshUsers[fic],fic,listeSshUsers[fic]))
+                #Copie des fichiers
+                exec_command("scp -r {}/{} {}@{}:/home/{}/mgyvpn/".format(chemin,fic,listeSshUsers[fic],fic,listeSshUsers[fic]),"Copie des fichiers")
+
+                #Copie du script lui-même
+                exec_command("scp {}/{} {}@{}:/home/{}/mgyvpn/".format(exec_path,sys.argv[0],listeSshUsers[fic],fic,listeSshUsers[fic]),"Déploiement du script sur le client")
+                
             except:
-                logmessag("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
+                logmessage("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
         
         etape="Redémarrage du server"
+        
         exec_command("systemctl restart openvpn@server",etape)
      
     else: #Cas d'une machine cliente
@@ -437,6 +444,9 @@ Ces commandes doivent être exécutées en mode administrateur
 
 except subprocess.CalledProcessError:
     logmessage("Le script s'est arrêté à cause d'une exception du type 'CalledProcessError'")
+except NameError:
+    logmessage("Le script s'est arrêté sur une Erreur de type NameError")
+    logmessage(traceback.format_exc())
 except NoneType:
     logmessage("Vous avez réussi, votre VPN est installé !!!")
 else:
