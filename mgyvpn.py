@@ -103,7 +103,8 @@ ca ca.crt
 dh dh2048.pem
 ifconfg-pool-persist ipp.txt
 keepalive 10 120
-tls-auth ta.key
+tls-auth ta.key 0
+cipher AES-256-CBC
 persist-key
 persist-tun
 verb 3
@@ -432,10 +433,12 @@ Ces commandes doivent être exécutées en mode administrateur
         etape="Redémarrage du client"
         #exec_command("systemctl restart openvpn@client",etape)
     
-    logmessage("Vous avez réussi, votre VPN est installé !!!")
+    #logmessage("Vous avez réussi, votre VPN est installé !!!")
 
 except subprocess.CalledProcessError:
     logmessage("Le script s'est arrêté à cause d'une exception du type 'CalledProcessError'")
+except NoneType:
+    logmessage("Vous avez réussi, votre VPN est installé !!!")
 else:
     logmessage("Le script s'est arrêté à cause d'une erreur indéterminée")
     logmessage(traceback.format_exc())
