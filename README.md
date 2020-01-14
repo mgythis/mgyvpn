@@ -1,41 +1,43 @@
-<h1>Script Python pour le d&eacute;ploiement de OpenVPN associé à Easy-RSA sur des machines sous Ubuntu</h1>
-<p>Ce script r&eacute;alise une installation automatique de Openvpn sous linux. Il a &eacute;t&eacute; test&eacute; sur Ubuntu 18.04 LTS avec la version 3 de Python.</p>
+<h1>Script Python pour le d&eacute;ploiement de OpenVPN associ&eacute; &agrave; Easy-RSA sur des machines sous Ubuntu</h1>
+<p>Ce script r&eacute;alise le d&eacute;ploiement automatique de Openvpn sous linux sur un serveur et plusieurs clients. Il a &eacute;t&eacute; test&eacute; sur Ubuntu 18.04 LTS avec la version 3.6 de Python.&nbsp;</p>
 <h3><strong>Description</strong></h3>
-<p><em>mgyvpn</em> permet au LAN derri&egrave;re le client VPN d'acc&eacute;der au LAN derri&egrave;re le serveur et vice-versa. Pour ce faire, avant l'ex&eacute;cution du script, il est n&eacute;cessaire que les postes clients et le poste serveurs soient joignables l'un l'autre au travers de leurs interfaces WAN.</p>
+<p><em>mgyvpn</em> permet au LAN derri&egrave;re le <em>client</em> VPN d'acc&eacute;der au LAN derri&egrave;re le <em>serveur</em> et vice-versa. Pour ce faire, avant l'ex&eacute;cution du script, il est n&eacute;cessaire que les postes <em>clients</em> et le poste <em>serveur</em> soient joignables l'un l'autre &agrave; travers leurs interfaces WAN gr&acirc;ce &agrave; leurs noms d'h&ocirc;te.</p>
 <h3><strong>Conditions particuli&egrave;res : </strong></h3>
 <ol>
-<li>Le script doit &ecirc;tre ex&eacute;cut&eacute; en tant que root</li>
-<li>Le poste sur lequel openvpn va &ecirc;tre install&eacute; doit &ecirc;tre connect&eacute; &agrave; Internet</li>
-<li>Pour une ex&eacute;cution du script &agrave; distance via SSH, il est important de configurer le compte de l'utilisateur SSH pour ex&eacute;cuter les commandes en mode SUDO sans confirmation de mot de passe</li>
-<li>Avant l'ex&eacute;cution du script sur un &eacute;ventuel client OpenVPN il convient de copier les cl&eacute;s de s&eacute;curit&eacute; g&eacute;n&eacute;r&eacute;es sur le serveur dans un dossier de la machine du client. Par d&eacute;faut le script cherchera les cl&eacute;s de s&eacute;curit&eacute;s dans /root/mgyvpn/</li>
-<li>Les postes clients et serveurs doivent avoir leur nom d'h&ocirc;te configur&eacute; dans les fichiers /etc/hosts &agrave; moins d'&ecirc;tre enregistr&eacute;s sur un DNS. En effet les noms d'h&ocirc;tes serviront pour pour nommer les cl&eacute;s de s&eacute;curit&eacute;. Clients et serveur devront pouvoir &ecirc;tre joints leur nom d'h&ocirc;te sur le WAN.</li>
-<li>Le routage IPv4 doit être activ&eacute; sur toutes les machines, clients et serveur</li>
+<li>Le script doit &ecirc;tre ex&eacute;cut&eacute; en tant que <em>root</em> sur le <em>serveur VPN</em></li>
+<li>L'utilisateur <em>root</em> sur le <em>serveur</em> doit avoir un acc&egrave;s SSH par cl&eacute; sur chaque client VPN. Pour cet acc&egrave;s utiliser un compte SUDO du client VPN</li>
+<li>Les postes <em>clients</em> et le <em>serveur</em> doivent &ecirc;tre connect&eacute;s &agrave; Internet pour le t&eacute;l&eacute;chargement des paquets d'installation de OpenVPN et Easy-RSA</li>
+<li>Les postes <em>clients</em> et <em>serveur</em>&nbsp;doivent avoir leur nom d'h&ocirc;te configur&eacute; dans les fichiers <em>/etc/hosts</em> &agrave; moins d'&ecirc;tre enregistr&eacute;s sur un DNS. Les noms d'h&ocirc;te serviront aussi au nommage des cl&eacute;s de s&eacute;curit&eacute;. <br /><em>Clients et serveur devront pouvoir &ecirc;tre joints sur le WAN avec leur nom d'h&ocirc;te</em>.</li>
+<li>Le routage IPv4 doit &ecirc;tre activ&eacute; sur toutes les machines, <em>clients</em> et <em>serveur.</em></li>
 </ol>
 <h3><strong>Installation</strong></h3>
 <p>Pour mettre en place une ou plusieurs liaisons VPN impliquant un serveur VPN unique, proc&eacute;der comme suit :</p>
 <h4>Sur le serveur VPN&nbsp;</h4>
-<ol>
-<li>Modifier le fichier <a href="https://github.com/mgythis/mgyvpn/mgyvpn.server.yaml">mgyvpn.server.yaml</a> pour correspondre &agrave; votre installation</li>
-<li>Ex&eacute;cuter la commande ci-dessous en tant que super utilisateur :
+<ul>
+<li>Cl&ocirc;ner le contenu du projet <em>mgyvpn</em> sur le serveur VPN.&nbsp;</li>
+<li>Dans le dossier ainsi cr&eacute;&eacute;, modifier le fichier <a href="https://github.com/mgythis/mgyvpn/mgyvpn.server.yaml">mgyvpn.server.yaml</a> pour correspondre &agrave; votre installation</li>
+<li>Ex&eacute;cuter la commande ci-dessous en tant que super utilisateur (<em>faire un sudo)</em> :
 <blockquote>#mgyvpn.py create server</blockquote>
-</li>
-<li>Se rendre dans le dossier /etc/openvpn et copier les fichiers ci-dessous de façon s&eacute;curis&eacute;e vers un dossier de votre choix sur chacun des clients :
-<ul style="list-style-type: square;">
-<li>ta.key</li>
-<li>ca.crt</li>
-<li>./easy-rsa/keys/NomDuClient.key</li>
-<li>./easy-rsa/keys/NomDuClient.crt</li>
-<li>dh2048.pem</li>
-<li>mgyvpn.client.yaml</li>
+<ul>
+<li>Un ficher <em>mgyvpn.log</em> est cr&eacute;&eacute;e dans le dossier et contient les logs de l'installation</li>
+<li>Un dossier <em>export</em> est cr&eacute;&eacute;, il contient des sous-dossiers contenant chacun les certificats et param&egrave;tres pour un <em>client vpn</em></li>
 </ul>
 </li>
-</ol>
+<li>Le script exportera par <em>ssh</em> sur chaque <em>client,</em> dans le <em>dossier d'accueil de l'utilisateur SSH</em>, un r&eacute;pertoire nomm&eacute; <em>mgyvpn</em>, contenant:
+<ul>
+<li>Un dossier portant le nom du&nbsp;<em>client vpn,&nbsp;</em>il contient :&nbsp;les certificats et les param&egrave;tres de configuration du client.</li>
+<li>Le script lui-m&ecirc;me</li>
+</ul>
+</li>
+</ul>
 <h4>Sur chaque client VPN</h4>
 <p style="padding-left: 30px;">Ex&eacute;cuter la commande :</p>
 <blockquote>
-<p style="padding-left: 30px;">#mgypvp.py add client <em>NomDelaMachineCliente</em> -d <em>DossierDesClesDeSecurite&nbsp;</em></p>
+<p style="padding-left: 30px;"><span style="background-color: #999999;">#mgypvp.py add client <em>NomDelaMachineCliente</em> -d <em>DossierDesClesDeSecurite&nbsp;</em></span></p>
+<p style="padding-left: 30px;"><em>ou&nbsp;<span style="background-color: #999999;">#mgypvp.py add client NomDelaMachineCliente</span></em></p>
 </blockquote>
-<p style="padding-left: 30px;">Remplacer les mots-cl&eacute;s&nbsp;<em>NomDelaMachineCliente</em> et&nbsp;<em>DossierDesClesDeSecurite</em> par les informations correspondantes dans la commande ci-dessus</p>
+<p style="padding-left: 30px;">Remplacer les mots-cl&eacute;s&nbsp;<em>NomDelaMachineCliente</em> et&nbsp;<em>DossierDesClesDeSecurite</em> par les informations correspondantes dans la commande ci-dessus.</p>
+<p style="padding-left: 30px;">Ici &eacute;galement vous trouverez un fichier <em>mgyvpn.log</em></p>
 <h3>Auteur</h3>
 <p style="padding-left: 30px;">Berthis Mongouya : <a href="mailto:erthis@gmail">erthis@gmail.com</a></p>
 <h3>Licence :</h3>
