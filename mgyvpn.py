@@ -74,6 +74,7 @@ try:
     def EditEasyRsaVars(fichier,dict_param):
         """Modification du fichier de configuration easy-rsa/vars"""
         texte=''
+
         with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
             for ligne in f: #Parcourir les lignes du ficher vars
                 remplacement=False
@@ -87,7 +88,11 @@ try:
                         break
                 if not remplacement:
                     texte+=ligne	#Copier la ligne sans modification
-        print(texte)	
+        
+        for cle in dict_param:
+            texte+='export {}="{}"\n'.format(cle,dict_param[cle])
+        
+        #print(texte)
 	#Enregistrer le fichier modifié
         with open(fichier,'w') as f:
             f.write(texte)
@@ -105,6 +110,7 @@ ifconfig-pool-persist /var/log/openvpn/ipp.txt
 status /var/log/openvpn/openvpn-status.log
 keepalive 10 120
 tls-auth ta.key 0
+;tls-crypt .tlsauth
 cipher AES-256-CBC
 persist-key
 persist-tun
@@ -119,6 +125,7 @@ explicit-exit-notify 1
             listeCcdFiles=[]
             listeFichiersConfig=[]
             listeSshUsers={}
+            port=''
             for conf in config_entiere:
                 for param,v in conf.items():
                     if param=="Easy-RSA":
@@ -189,7 +196,9 @@ persist-key
 persist-tun
 remote-cert-tls server
 tls-auth ta.key 1
+;tls-crypt .tlsauth
 cipher AES-256-CBC
+ns-cert-type server
 verb 3
 """
         with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
@@ -252,20 +261,24 @@ Ces commandes doivent être exécutées en mode administrateur
             return mode_, fichiersACopier
         
         #Dans le cas de l'exécution sur un client sans spécifier le dossier de récupération du fichier de configuration après l'option -d, indiquer un dossier par défaut
-        if len(arg)==4:
-            arg.append("-d")
-            arg.append("~/mgyvpn/serverremotesite")
-            
 
-        if arg[1]=='create':
+        if arg[1]=='create': #Création de OpenVpn Server
             if arg[2]=='server':
                 mode_='m_create_server'
                 logmessage("Création d'un serveur OpenVpn")
-            elif arg[2]=='client':
-                if arg[3]:
+            elif arg[2]=='client': #Création de Openvpn Client
+                #Gestion d'un dossier de recherche par défaut pour les paramètres d'installation du client openvpn, en l'occurrence c'est le dossier portant le nom réseau du client, dans le répertoire courant
+                if len(arg)==3: #Si le nom du client n'est pas spécifié en arguments
+                    print_help()
+                    return mode_, fichiersACopier
+                if len(arg)==4:
+                    arg.append("-d")
+                if len(arg)==5:
+                    arg.append("{}/{}".format(os.getcwd(),arg[3]))
+                if arg[3]: #Nom d'hôte du client
                     if arg[4]=='-d' and arg[5]:
                         try:
-                            fichiers=['ca.crt',"ta.key","dh2048.pem","{}.crt".format(arg[3]),'{}.key'.format(arg[3]),"mgyvpn.client.yaml"]
+                            fichiers=['ca.crt',"ta.key","{}.crt".format(arg[3]),'{}.key'.format(arg[3]),"mgyvpn.client.yaml"]
                             i=0
                             for f in fichiers:
                                 fic="{}/{}".format(arg[5],f)
@@ -316,7 +329,7 @@ Ces commandes doivent être exécutées en mode administrateur
         serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict, listeSshUsers = EditConfVpnServer("./mgyvpn.server.yaml")
     elif mode_=='m_create_client':
         clientName, clientConfFile=EditConfVpnClient("{}/mgyvpn.client.yaml".format(sys.argv[5]))
-    
+      
 
     #Mise à jour du système
     etape="Mise à jour du système"
@@ -364,6 +377,7 @@ Ces commandes doivent être exécutées en mode administrateur
         exec_command(". ./vars && ./build-key-server --batch {}".format(serverName),etape)
 
         etape="Générer les paramètres DH\nAttention, cette étape peut durer plusieurs minutes"
+#        exec_command(". ./vars &&  ./openssl dhparam -out dh2048.pem 2048", etape) 
         exec_command(". ./vars &&  ./build-dh", etape) 
 
         os.chdir("/etc/openvpn/easy-rsa/keys")
@@ -423,35 +437,34 @@ Ces commandes doivent être exécutées en mode administrateur
             except:
                 logmessage("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
         
-        etape="Redémarrage du server"
+        etape="Démarrage du server"
         
-        exec_command("systemctl restart openvpn@server",etape)
+        exec_command("systemctl start openvpn@server",etape)
      
     else: #Cas d'une machine cliente
         os.chdir("/etc/openvpn/")
         
         #Récupérer sur le serveur les clés du client et au besoin les supprimer (faire de ceci un paramètre du module) sur le serveur
         for fic in fichiersACopierSurLeClient:
-            exec_command("cp {} ./".format(fic))
+            exec_command("cp {} ./".format(fic),"copie de {}".format(fic))
 
         #Substitution du fichier de configuration
         exec_command("cp {} ./".format(clientConfFile))
 
-        etape="Redémarrage du client"
-        #exec_command("systemctl restart openvpn@client",etape)
+        etape="Démarrage du client"
+        exec_command("systemctl start openvpn@client",etape)
     
-    #logmessage("Vous avez réussi, votre VPN est installé !!!")
 
 except subprocess.CalledProcessError:
     logmessage("Le script s'est arrêté à cause d'une exception du type 'CalledProcessError'")
 except NameError:
     logmessage("Le script s'est arrêté sur une Erreur de type NameError")
-    logmessage(traceback.format_exc())
-except NoneType:
-    logmessage("Vous avez réussi, votre VPN est installé !!!")
+except SyntaxError:
+    logmessage("Le script s'est arrêté sur une Erreur de type SyntaxError")
+except TypeError:
+    logmessage("Le script s'est arrêté sur une Erreur de type TypeError")
 else:
-    logmessage("Le script s'est arrêté à cause d'une erreur indéterminée")
-    logmessage(traceback.format_exc())
+    logmessage("Vous avez réussi, votre VPN est installé !!!")
 finally:
     logmessage('Fin du script')
     logfile.close()
