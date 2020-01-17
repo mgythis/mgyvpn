@@ -31,7 +31,7 @@ import os
 import re
 import yaml
 import traceback
-from socket import inet_aton
+import ipaddress
 from copy import deepcopy
 
 #Redirection des messages d'erreur
@@ -60,16 +60,23 @@ try:
     signal.signal(signal.SIGINT,fermeture)
 
     def checked_ip(ip_addr):
-        """Cette fonction renvoie True quand l'adresse IP fournie est valide
-        Elle crée une exception dans le cas d'une adresse invalide"""
+        """Cette fonction produit une exception si l'adresse IP fournie n'est pas valide"""
         try:
-            #From socket module
-            inet_aton(str(ip_addr))
-            return True
+            ipaddress.ip_address(ip_addr)
         except:
-            logmessage("l'adresse IP '{}' n'est pas valide".format(str(p_addr)))
-            raise Exception("IP '{}' non valide".format(str(ip_addr)))  
-
+            logmessage("l'adresse IP '{}' n'est pas valide".format(ip_addr))
+            raise  
+    
+    def check_net_ip(ipmask):
+        try:
+            ipmask=ipmask.strip()
+            ipmask=ipmask.replace('  ',' ')
+            ipmask=ipmask.replace(' ','/')
+        
+            ipaddress.ip_network(ipmask)
+        except:
+            logmessage("L'adresse de réseau '{}' n'est pas valide !".format(ipmask))
+            raise
 
     def exec_command(macommande,titre=""):
 
@@ -109,11 +116,15 @@ try:
         for cle in dict_param:
             texte+='export {}="{}"\n'.format(cle,dict_param[cle])
         
-        #print(texte)
 	#Enregistrer le fichier modifié
         with open(fichier,'w') as f:
             f.write(texte)
     
+    def check_entry(regStr,entry,errorMsg):
+        """Cette fonction vérifie la valeur entry avec une expression régulière; en cas de non conformité une exception est générée avec enregistrement dans le journal"""
+        if re.match(regStr,entry) is None:
+            logmessage("'{}': ".format(entry) + errorMsg)
+            raise Exception()
 
     def EditConfVpnServer(fichier):
         """Création du fichier de configuration ./server.conf
@@ -127,7 +138,6 @@ ifconfig-pool-persist /var/log/openvpn/ipp.txt
 status /var/log/openvpn/openvpn-status.log
 keepalive 10 120
 tls-auth ta.key 0
-;tls-crypt .tlsauth
 cipher AES-256-CBC
 persist-key
 persist-tun
@@ -152,14 +162,22 @@ explicit-exit-notify 1
                             logmessage("Version du fichier de configuration non pris en charge")
                             exit()
                     elif param=="ServerName":
-                       serverName=v
+                        check_entry(r"\w?",v,"Nom de serveur invalide !") 
+                        serverName=v
                     elif param=="Network":
-                        texte+="server " + v["virtualNetwork"]+"\n"                      
-                        if checked_ip(v["wanInterface"]):
-                            texte+="local " + v["wanInterface"]+"\n"
-                            port=str(v["ipPort"])
-                        texte+="port " + str(port)+"\n"
-                        texte+='push "route  '+ v["lanNetwork"]+'"\n'
+                        checked_ip(v["wanInterface"])
+                        texte+="local " + v["wanInterface"]+"\n"
+                            
+                        port=str(v["ipPort"])
+                        check_entry(r"^\d+$",port,"Numéro de port invalide")                    
+                        texte+="port " + port+"\n"
+                        
+                        check_net_ip(v['virtualNetwork'])
+                        texte+="server {}\n".format(v["virtualNetwork"])
+                        
+                        check_net_ip(v["lanNetwork"])
+                        texte+='push "route  {}"\n'.format(v['lanNetwork'])
+                        print(texte)
                     elif param=="Clients":
                         if not os.path.isdir("./ccd"):
                             logmessage("Préparation du répertoire CCD")
@@ -169,10 +187,17 @@ explicit-exit-notify 1
                         chemin=os.getcwd()
 
                         for param2,t in v.items():
+                            
+                            check_entry(r"\w?",param2,"Nom d'hôte invalide !") 
+                            
                             logmessage("Création d'une route vers le LAN derrière le client '{}'".format(param2))
                             listeClients.append(param2)
                             
+                            check_entry(r"\w?",t["ssh-user"],"Nom d'utilisateur invalide !") 
                             listeSshUsers[param2]=t["ssh-user"]
+                            
+                            
+                            check_net_ip(t["lanNetwork"])
                             
                             exec_command('echo "iroute {}" > ./ccd/{}'.format(t["lanNetwork"],param2))
                             
@@ -191,13 +216,14 @@ explicit-exit-notify 1
         
         texte="""Version: 1.0
 ServerName: {}
-Port: {}""".format(serverName,port)
+Port: {}
+""".format(serverName,port)
         
         fic='{}/mgyvpn.client.yaml'.format(os.getcwd())
         with open(fic,'w') as f:
             f.write(texte)
         listeFichiersConfig.append(fic)
-        
+
         return serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict, listeSshUsers
     
     
@@ -214,7 +240,7 @@ persist-tun
 remote-cert-tls server
 tls-auth ta.key 1
 cipher AES-256-CBC
-ns-cert-type server
+;ns-cert-type server
 verb 3
 """
         with open(fichier,'r') as f: #Ouvrir le fichier en lecture seule
@@ -240,10 +266,6 @@ verb 3
         return clientName, fic
 
 
-
-    def show_config():
-        """Cette fonction affiche le fichier de configuration"""
-        print("./mgyvpn.server.yaml")
 
     def print_help():
         """Cette fonction affiche l'aide pou rle module"""
@@ -309,7 +331,8 @@ Ces commandes doivent être exécutées en mode administrateur
                                     i+=1
                                     fichiersACopier.append(fic)
                             if i!=len(fichiers):
-                                raise Exception("Toutes les clés ne sont pas présentes")
+                                logmessage("Toutes les clés ne sont pas présentes !!!")
+                                raise Exception()
                             mode_='m_create_client'
                             logmessage("Création du client OpenVpn nommé '{}'".format(arg[3]))
                             logmessage("Les clés de sécurité seront importées du dossier '{}'".format(arg[5]))
@@ -404,9 +427,6 @@ Ces commandes doivent être exécutées en mode administrateur
             logmessage("Erreur dans la création de la clé statique d'authentification TLS")
             raise
 
-        #etape="Création d'un certificat et d'une clé privée pour le serveur"
-        #exec_command(". ./vars && ./build-key-server --batch {}".format(serverName),etape)
-
         etape="Générer les paramètres DH\nAttention, cette étape peut durer plusieurs minutes"
         try:
             exec_command(". ./vars &&  ./build-dh", etape) 
@@ -459,12 +479,12 @@ Ces commandes doivent être exécutées en mode administrateur
                 os.mkdir("{}/{}".format(chemin,fic)) #Créer un dossier pour chaque client
                 try:
                     os.chdir("/etc/openvpn")
-                    exec_command("cp -f ca.crt dh2048.pem ta.key mgyvpn.client.yaml {}/{}/".format(chemin,fic))
+                    exec_command("cp -f ca.crt ta.key mgyvpn.client.yaml {}/{}/".format(chemin,fic))
                     os.chdir("/etc/openvpn/easy-rsa/keys")
                     exec_command("cp -f ./{}.crt ./{}.key {}/{}/".format(fic,fic,chemin,fic))
                     
                 except:
-                    pass
+                    logmessage("Erreur dans la copie de certificats ou fichiers de configuration pour le client '{}'".format(fic))
 
         #Copier les fichiers par SSH sur les clients 
         #en utilisant le compte ssh indiqué dans le fichier de configuration
@@ -520,9 +540,9 @@ except TypeError:
     logmessage("Le script s'est arrêté sur une Erreur de type TypeError")
 else:
     if mode_=='m_create_server':
-        logmessage("Vous avez réussi, le serveur OpenVpn est installé !!!")
+        logmessage("Bravo, le serveur OpenVpn est installé et configuré !!!")
     else:
-        logmessage("Vous avez réussi, le client Openvpn '{}' est installé !!!".format(clientName))
+        logmessage("Bravo, le client Openvpn '{}' est installé et configuré !!!".format(clientName))
 finally:
     logmessage('Fin du script')
     logfile.close()
