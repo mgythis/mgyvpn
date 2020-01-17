@@ -3,9 +3,26 @@
 """mgyvpn.py
 Ce script python permet d'automatiser l'installation d'OpenVPN avec chiffrement sous easy-rsa
 entre un noeud serveur et des noeuds clients
-Il a été réalisé et testé sous Ubuntu Server LTS 18.04
-Il fait appel à un ficher de configuration yaml
+Il a été réalisé et testé sous Ubuntu Server LTS 18.04 et Python 3.6
+Il doit être exécuté sur le serveur OPENVPN
+Il est associé à un fichier de configuration nommé mgyvpn.server.yaml
+Pour plus d'information, se rendre sur https://github.com/mgythis/mgyvpn
 """
+###########################################################################
+# This program is free software: you can redistribute it and/or modify it #
+#    under the terms of the GNU General Public Licence as published by    #
+#    the Free Software Foundation, either version 3 of the licence, or    #
+#                          any later version.                             #
+#                                                                         #
+#      This program is distributed in the hope hat it will be usefull,    #
+#      but WITHOUT ANY WARRANTY; without even the implied warranty of     #
+#            MERCHANTABILIY or FITENSS FOR A PARTICUA PURPOSE.            #  
+#            See the General Public Licence form more deatails            #
+#                                                                         #
+#                  Par Berthis Mongouya, erthis@gmail.com                 #
+#                   Copyright (C) 2020 Berthis Mongouya                   #
+#                         Licence GNU/GPL 3.0                             #
+###########################################################################
 
 import sys
 import signal
@@ -196,7 +213,6 @@ persist-key
 persist-tun
 remote-cert-tls server
 tls-auth ta.key 1
-;tls-crypt .tlsauth
 cipher AES-256-CBC
 ns-cert-type server
 verb 3
@@ -231,16 +247,21 @@ verb 3
 
     def print_help():
         """Cette fonction affiche l'aide pou rle module"""
-        print("""Syntaxe des commandes du module mgyvpn :
+        print("""
+++++++++++++++++
+AIDE SUR MGYVPN
+++++++++++++++++
+
+Syntaxe des commandes du module mgyvpn :
 
 Pour installer un serveur openvpn:
     create server
         
-Pour installer un client openvpn
+Pour installer un client openvpn:
     create client ClientName -d keysDirectory
                     
     - ClientName est le nom réseau (et non l'adresse ip) du client 
-    - keysDirectory est le répertoire sont copiées les clés de sécurité sur le client Openvpn
+    - keysDirectory est le répertoire ou sont copiées les clés de sécurité sur le client Openvpn
 
 Ces commandes doivent être exécutées en mode administrateur
 
@@ -359,41 +380,66 @@ Ces commandes doivent être exécutées en mode administrateur
         try:
             exec_command("ln -s /etc/openvpn/easy-rsa/openssl-1.0.0.cnf /etc/openvpn/easy-rsa/openssl.cnf")
         except:
-            logmessage(traceback.format_exc())
+            pass
 
         #Changer de répertoire de travail
         os.chdir("/etc/openvpn/easy-rsa/")
 
         #Editer le fichier "/etc/openvpn/easy-rsa/vars"
+        logmessage("Edition du fichier VARS")
         EditEasyRsaVars("./vars",rsaDict)
 
-        etape="Générer le Master Authority Certificate (CA)"
-        exec_command(". ./vars && ./clean-all && ./build-ca --batch",etape)
-        
-        etape="Générer la clé d'authentification TLS (TA)"
-        exec_command("openvpn --genkey --secret ./keys/ta.key",etape)
+        etape="""Générer le Master Authority Certificate (CA)"
+        Et les cla et le certificat du serveur"""
+        try:
+            exec_command(". ./vars && ./clean-all && ./build-ca --batch && ./build-key-server --batch {}".format(serverName),etape)
+        except:
+            logmessage("Erreur dans la création du maître de certification et des clé et certificat du serveur")
+            raise
 
-        etape="Création d'un certificat et d'une clé privée pour le serveur"
-        exec_command(". ./vars && ./build-key-server --batch {}".format(serverName),etape)
+        etape="Générer la clé d'authentification TLS (TA)"
+        try:
+            exec_command("openvpn --genkey --secret ./keys/ta.key",etape)
+        except:
+            logmessage("Erreur dans la création de la clé statique d'authentification TLS")
+            raise
+
+        #etape="Création d'un certificat et d'une clé privée pour le serveur"
+        #exec_command(". ./vars && ./build-key-server --batch {}".format(serverName),etape)
 
         etape="Générer les paramètres DH\nAttention, cette étape peut durer plusieurs minutes"
-#        exec_command(". ./vars &&  ./openssl dhparam -out dh2048.pem 2048", etape) 
-        exec_command(". ./vars &&  ./build-dh", etape) 
+        try:
+            exec_command(". ./vars &&  ./build-dh", etape) 
+        except:
+            logmessage("Erreur dans la création du paramètre DH")
+            raise
 
         os.chdir("/etc/openvpn/easy-rsa/keys")
+        
         etape="Copie des certificats dans le répertoire de travail"
-        exec_command("cp {}.crt {}.key ca.crt dh2048.pem ta.key /etc/openvpn/".format(serverName,serverName),etape)
-
+        try:
+            exec_command("cp {}.crt {}.key ca.crt dh2048.pem ta.key /etc/openvpn/".format(serverName,serverName),etape)
+        except:
+            logmessage("Erreur dans la copie des clés et certificat vers le répertoire /etc/openvpn")
+            raise
+        #Création des ceertificats pour les clients
         os.chdir("/etc/openvpn/easy-rsa/")
-        etape="Créer les certificats de sécurité pour les clients"
+        logmessage("Créer les certificats de sécurité pour les clients")
         for clientName in listeClients:
-            exec_command(". ./vars && ./build-key --batch {}".format(clientName),etape) 
+            try:
+                exec_command(". ./vars && ./build-key --batch {}".format(clientName),"Création du ceertificat pour {}".format(clientName))
+            except:
+                logmessage("La création du certificat a échoué")
 
+        #Création du dossier ccd requis pour le routage vers les LANs clients
+        
         os.chdir("/etc/openvpn/")
+        
         logmessage("Créer le dossier ./ccd")
         if not os.path.isdir("./ccd"):
             os.mkdir("./ccd") #Créer lo dossier si cela n'existe pas
         
+        #Copie des fichiers de routage dans le répertoir
         for fic in listeCcdFiles:
             exec_command("cp {} ./ccd/".format(fic))
 
@@ -422,24 +468,33 @@ Ces commandes doivent être exécutées en mode administrateur
 
         #Copier les fichiers par SSH sur les clients 
         #en utilisant le compte ssh indiqué dans le fichier de configuration
+        #Puis exécuter le script sur le client
         for fic in listeClients:
-            logmessage("Si le sripte reste figé à cette étape, il se pourrait que l'accès SSH par clé de sécurité ne fonctionne pas")
+            logmessage("Si le script reste figé à cette étape, il se pourrait que l'accès SSH par clé de sécurité ne fonctionne pas")
             try:
                 #Création du dossier d'accueil du logiciel sur le client
                 logmessage("Création du dossier d'accueil sur le client '{}'".format(fic))
                 exec_command("ssh {}@{} 'mkdir -p /home/{}/mgyvpn'".format(listeSshUsers[fic],fic,listeSshUsers[fic]))
-                #Copie des fichiers
+                #Copie des fichiers sur le client
                 exec_command("scp -r {}/{} {}@{}:/home/{}/mgyvpn/".format(chemin,fic,listeSshUsers[fic],fic,listeSshUsers[fic]),"Copie des fichiers")
 
-                #Copie du script lui-même
+                #Copie du script lui-même sur le client
                 exec_command("scp {}/{} {}@{}:/home/{}/mgyvpn/".format(exec_path,sys.argv[0],listeSshUsers[fic],fic,listeSshUsers[fic]),"Déploiement du script sur le client")
                 
             except:
                 logmessage("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
         
-        etape="Démarrage du server"
+        etape="Démarrage du service"
         
         exec_command("systemctl start openvpn@server",etape)
+
+        #Installation sur les clients
+        for clientName in listeClients:
+            try:
+                logmessage("Installation du client Openvpn nommé '{}'".format(clientName))
+                exec_command("ssh {}@{} 'cd ~/mgyvpn && sudo ./mgyvpn.py create client {}'".format(listeSshUsers[clientName],clientName,clientName))
+            except:
+                logmessage("Erreur dans l'installation du client VPN '{}'".format(clientName))
      
     else: #Cas d'une machine cliente
         os.chdir("/etc/openvpn/")
@@ -451,12 +506,12 @@ Ces commandes doivent être exécutées en mode administrateur
         #Substitution du fichier de configuration
         exec_command("cp {} ./".format(clientConfFile))
 
-        etape="Démarrage du client"
+        etape="Démarrage du service"
         exec_command("systemctl start openvpn@client",etape)
     
 
 except subprocess.CalledProcessError:
-    logmessage("Le script s'est arrêté à cause d'une exception du type 'CalledProcessError'")
+    logmessage("Le script s'est arrêté à cause d'une exception de type CalledProcessError")
 except NameError:
     logmessage("Le script s'est arrêté sur une Erreur de type NameError")
 except SyntaxError:
@@ -464,7 +519,10 @@ except SyntaxError:
 except TypeError:
     logmessage("Le script s'est arrêté sur une Erreur de type TypeError")
 else:
-    logmessage("Vous avez réussi, votre VPN est installé !!!")
+    if mode_=='m_create_server':
+        logmessage("Vous avez réussi, le serveur OpenVpn est installé !!!")
+    else:
+        logmessage("Vous avez réussi, le client Openvpn '{}' est installé !!!".format(clientName))
 finally:
     logmessage('Fin du script')
     logfile.close()
