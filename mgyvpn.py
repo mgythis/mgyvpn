@@ -463,9 +463,10 @@ Ces commandes doivent être exécutées en mode administrateur
         for fic in listeCcdFiles:
             exec_command("cp {} ./ccd/".format(fic))
 
-        #Copie des fichiers de configuration server.conf et mgyyvpn.server.yaml dans /etc/openvpn
+        #Copie des fichiers de configuration server.conf et mgyyvpn.client.yaml dans /etc/openvpn
+        logmessage("Copie des fichiers dans /etc/openvpn/ccd")
         for fic in listeFichiersConfig:
-            exec_command("cp {} ./".format(fic))
+            exec_command("mv {} ./".format(fic))
 
         
         #Création du dossier ./export dans le répertoire d'exécution du module mgyvpn
@@ -481,7 +482,7 @@ Ces commandes doivent être exécutées en mode administrateur
                     os.chdir("/etc/openvpn")
                     exec_command("cp -f ca.crt ta.key mgyvpn.client.yaml {}/{}/".format(chemin,fic))
                     os.chdir("/etc/openvpn/easy-rsa/keys")
-                    exec_command("cp -f ./{}.crt ./{}.key {}/{}/".format(fic,fic,chemin,fic))
+                    exec_command("mv ./{}.crt ./{}.key {}/{}/".format(fic,fic,chemin,fic))
                     
                 except:
                     logmessage("Erreur dans la copie de certificats ou fichiers de configuration pour le client '{}'".format(fic))
@@ -490,7 +491,6 @@ Ces commandes doivent être exécutées en mode administrateur
         #en utilisant le compte ssh indiqué dans le fichier de configuration
         #Puis exécuter le script sur le client
         for fic in listeClients:
-            logmessage("Si le script reste figé à cette étape, il se pourrait que l'accès SSH par clé de sécurité ne fonctionne pas")
             try:
                 #Création du dossier d'accueil du logiciel sur le client
                 logmessage("Création du dossier d'accueil sur le client '{}'".format(fic))
