@@ -353,6 +353,12 @@ Ces commandes doivent être exécutées en mode administrateur
 
     exec_path=os.getcwd()
     
+    #Vérifier que Openvpn n'est pas déjà installé
+    if os.path.isfile('/lib/systemd/system/openvpn.service'):
+        logmessage("Openvpn est déjà présent sur ce système !")
+        logmessage("L'installation ne peut pas se poursuivre !")
+        raise Exception()
+    
     #Cette variable indique le contexte : création d'un serveur ou création d'un client 
     mode_='m_none'
     
@@ -367,16 +373,16 @@ Ces commandes doivent être exécutées en mode administrateur
         exit()
 
     
-    logmessage("Configuration d'OpenVPN")	
+    logmessage("Préparation de la configuration d'OpenVPN")	
     
     if mode_=='m_create_server':
         serverName, listeClients, listeCcdFiles, listeFichiersConfig, rsaDict, listeSshUsers = EditConfVpnServer("./mgyvpn.server.yaml")
     elif mode_=='m_create_client':
         clientName, clientConfFile=EditConfVpnClient("{}/mgyvpn.client.yaml".format(sys.argv[5]))
       
-
     #Mise à jour du système
-    etape="Mise à jour du système"
+    #Décommenter les deux lignes suivantes si vous souhaitez une mise à jour de la bibliothèque des dépôts avant l'installation
+#    etape="Mise à jour du système"
 #    exec_command("apt-get -y update && apt-get -y upgrade",etape)
     
     #Installation d'OpenVPN
@@ -391,6 +397,8 @@ Ces commandes doivent être exécutées en mode administrateur
         
         #exec_command("apt-get install -y easy-rsa=2.2.2-2 -V",etape)
         
+        logmessage("Configuration de Openvpn")
+
         logmessage("Création du dossier easy-rsa")
         try:
             os.mkdir("/etc/openvpn/easy-rsa/")
@@ -459,12 +467,12 @@ Ces commandes doivent être exécutées en mode administrateur
         if not os.path.isdir("./ccd"):
             os.mkdir("./ccd") #Créer lo dossier si cela n'existe pas
         
-        #Copie des fichiers de routage dans le répertoir
+        #Copie des fichiers de routage dans le répertoire
         for fic in listeCcdFiles:
             exec_command("cp {} ./ccd/".format(fic))
 
         #Copie des fichiers de configuration server.conf et mgyyvpn.client.yaml dans /etc/openvpn
-        logmessage("Copie des fichiers dans /etc/openvpn/ccd")
+        logmessage("Copie des fichiers de configuration")
         for fic in listeFichiersConfig:
             exec_command("mv {} ./".format(fic))
 
@@ -505,7 +513,6 @@ Ces commandes doivent être exécutées en mode administrateur
                 logmessage("Erreur dans l'exportation des clés sur le client '{}'".format(fic))
         
         etape="Démarrage du service"
-        
         exec_command("systemctl start openvpn@server",etape)
 
         #Installation sur les clients
@@ -538,6 +545,8 @@ except SyntaxError:
     logmessage("Le script s'est arrêté sur une Erreur de type SyntaxError")
 except TypeError:
     logmessage("Le script s'est arrêté sur une Erreur de type TypeError")
+except FileNotFoundError:
+    logmessage("Le script s'est arrêté sur une Erreur de type FileNotFound")
 else:
     if mode_=='m_create_server':
         logmessage("Bravo, le serveur OpenVpn est installé et configuré !!!")

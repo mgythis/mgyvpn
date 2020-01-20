@@ -2,14 +2,14 @@
 
 Version: 1.0
 
-ServerName: servermainsite
+ServerName: vpnserver
 
 Network:
     #WAN IP 
     wanInterface: 10.0.100.1
     
     #VPN listening Port
-    ipPort: 443
+    ipPort: 1194
     
     #Nested network behind server
     lanNetwork: 192.168.100.0 255.255.255.0
@@ -19,14 +19,18 @@ Network:
 
   
 Clients:
-    #Change the hostname remote1 and remote 2 to suit your clients host names
-    serverremotesite:
+    #Change the hostnames vpnclient1 and vpnclient2... to suit your clients host names
+    vpnclient1:
         wanInterface: 10.0.100.2
         lanNetwork: 192.168.101.0 255.255.255.0
         ssh-user: maint        
-    serverremotesite2:
+    vpnclient2:
         wanInterface: 10.0.100.3
         lanNetwork: 192.168.102.0 255.255.255.0
+        ssh-user: maint        
+    vpnclient3:
+        wanInterface: 10.0.100.4
+        lanNetwork: 192.168.103.0 255.255.255.0
         ssh-user: maint        
             
 Easy-RSA:
